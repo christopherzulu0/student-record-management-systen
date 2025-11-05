@@ -1,19 +1,32 @@
 "use client"
 
-import { useAuth } from "@/lib/auth-context"
 import { useRouter, usePathname } from "next/navigation"
-import { Home, Users, BookOpen, BarChart3, FileText, Mail, GraduationCap, UserCog, User, Upload } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Home, Users, BookOpen, BarChart3, FileText, Mail, GraduationCap, UserCog, User as UserIcon, Upload } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
+import type { User } from "@/lib/db"
 
 export function Sidebar() {
-  const { user } = useAuth()
+  const [user, setUser] = useState<User | null>(null)
   const router = useRouter()
   const pathname = usePathname()
+
+  useEffect(() => {
+    // Get user from localStorage
+    const stored = localStorage.getItem("current_user")
+    if (stored) {
+      try {
+        setUser(JSON.parse(stored))
+      } catch (e) {
+        console.error("Error parsing user from localStorage:", e)
+      }
+    }
+  }, [])
 
   const getInitials = (name?: string) => {
     if (!name) return "U"
@@ -53,7 +66,7 @@ export function Sidebar() {
         { href: "/student/transcript", label: "Transcript", icon: FileText, section: "Academic" },
         { href: "/student/teachers", label: "My Instructors", icon: BookOpen, section: "Academic" },
         { href: "/student/recommendations", label: "Recommendations", icon: Mail, section: "Academic" },
-        { href: "/student/profile", label: "Complete Profile", icon: User, section: "Account" },
+        { href: "/student/profile", label: "Complete Profile", icon: UserIcon, section: "Account" },
         { href: "/student/documents", label: "Document Uploads", icon: Upload, section: "Account" },
       ]
     }

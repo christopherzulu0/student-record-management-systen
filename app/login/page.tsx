@@ -2,14 +2,12 @@
 
 import type React from "react"
 
-import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { db } from "@/lib/db"
 import { User } from "lucide-react"
 
 export default function LoginPage() {
-  const { setUser } = useAuth()
   const router = useRouter()
 
   const handleSelectUser = (role: "student" | "teacher" | "admin") => {
@@ -24,7 +22,8 @@ export default function LoginPage() {
     }
 
     if (selectedUser) {
-      setUser(selectedUser)
+      // Store user in localStorage directly
+      localStorage.setItem("current_user", JSON.stringify(selectedUser))
       router.push("/dashboard")
     }
   }
