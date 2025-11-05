@@ -190,6 +190,7 @@ const teachers: Array<{
   },
   {
     id: "2",
+    userId: "2",
     name: "Dr. John Wilson",
     email: "john.wilson@university.edu",
     department: "Mathematics",
@@ -197,6 +198,7 @@ const teachers: Array<{
   },
   {
     id: "3",
+    userId: "2",
     name: "Prof. Emily Brown",
     email: "emily.brown@university.edu",
     department: "English",
