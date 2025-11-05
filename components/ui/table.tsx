@@ -53,6 +53,9 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
 }
 
 function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
+  // Filter out any non-HTML props that shouldn't be passed to the DOM
+  const { hoverVisible, ...restProps } = props as React.ComponentProps<"tr"> & { hoverVisible?: boolean }
+  
   return (
     <tr
       data-slot="table-row"
@@ -60,7 +63,7 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
         "hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors",
         className
       )}
-      {...props}
+      {...restProps}
     />
   )
 }

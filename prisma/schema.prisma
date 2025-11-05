@@ -1,0 +1,364 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum Role {
+  student
+  teacher
+  admin
+}
+
+enum StudentStatus {
+  active
+  at_risk
+  suspended
+  inactive
+}
+
+enum TeacherStatus {
+  active
+  on_leave
+  inactive
+}
+
+enum DocumentStatus {
+  pending
+  uploaded
+  approved
+  rejected
+  expired
+}
+
+enum RecommendationStatus {
+  pending
+  submitted
+  declined
+}
+
+enum RecommendationPriority {
+  high
+  medium
+  low
+}
+
+enum GradeLetter {
+  A_PLUS
+  A
+  A_MINUS
+  B_PLUS
+  B
+  B_MINUS
+  C_PLUS
+  C
+  C_MINUS
+  D_PLUS
+  D
+  D_MINUS
+  F
+}
+
+enum GradeTrend {
+  up
+  down
+  stable
+}
+
+enum CourseStatus {
+  active
+  inactive
+  completed
+}
+
+enum EnrollmentStatus {
+  enrolled
+  dropped
+  completed
+  failed
+}
+
+// User Model - Base authentication and profile
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  password          String    // Hashed password
+  firstName         String    @map("first_name")
+  lastName          String    @map("last_name")
+  dateOfBirth       DateTime? @map("date_of_birth")
+  gender            Gender?
+  nationality       String?
+  phone             String?
+  address           String?
+  city              String?
+  state             String?
+  zipCode           String?   @map("zip_code")
+  country           String?
+  bio               String?
+  role              Role      @default(student)
+  status            String?   @default("active") // Generic status field
+   EmergencyContactName   String
+  EmergencyContactNumber String
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  student Student?
+  teacher Teacher?
+  admin   Admin?
+
+  @@map("users")
+}
+
+// Student Model
+model Student {
+  id                   String        @id @default(cuid())
+  userId               String        @unique @map("user_id")
+  studentId            String        @unique @map("student_id") // e.g., STU001
+  enrollmentDate       DateTime      @map("enrollment_date")
+  expectedGraduation   DateTime?     @map("expected_graduation")
+  program              String? // e.g., "Computer Science"
+  department           String?
+  yearOfStudy          Int?          @map("year_of_study")
+  cumulativeGPA        Float?        @default(0.0) @map("cumulative_gpa")
+  totalCreditsEarned   Int           @default(0) @map("total_credits_earned")
+  totalCreditsRequired Int           @default(60) @map("total_credits_required")
+  status               StudentStatus @default(active)
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enrollments     Enrollment[]
+  grades          Grade[]
+  documents       Document[]
+  recommendations Recommendation[]
+  semesters       StudentSemester[]
+
+  // Emergency Contact
+  emergencyContactName     String? @map("emergency_contact_name")
+  emergencyContactRelation String? @map("emergency_contact_relation")
+  emergencyContactPhone    String? @map("emergency_contact_phone")
+  emergencyContactEmail    String? @map("emergency_contact_email")
+
+  @@map("students")
+}
+
+// Teacher Model
+model Teacher {
+  id         String        @id @default(cuid())
+  userId     String        @unique @map("user_id")
+  teacherId  String?       @unique @map("teacher_id")
+  department String?
+  rating     Float?        @default(0.0)
+  status     TeacherStatus @default(active)
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courses         Course[]
+  recommendations Recommendation[]
+  grades          Grade[]
+
+  @@map("teachers")
+}
+
+// Admin Model
+model Admin {
+  id        String   @id @default(cuid())
+  userId    String   @unique @map("user_id")
+  adminId   String?  @unique @map("admin_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("admins")
+}
+
+// Department Model
+model Department {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  courses Course[]
+
+  @@map("departments")
+}
+
+// Semester Model
+model Semester {
+  id        String   @id @default(cuid())
+  name      String   @unique // e.g., "Fall 2023", "Spring 2024"
+  startDate DateTime @map("start_date")
+  endDate   DateTime @map("end_date")
+  isActive  Boolean  @default(false) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  enrollments      Enrollment[]
+  grades           Grade[]
+  studentSemesters StudentSemester[]
+
+  @@map("semesters")
+}
+
+// Course Model
+model Course {
+  id           String       @id @default(cuid())
+  courseCode   String       @unique @map("course_code") // e.g., "CS101"
+  name         String // e.g., "Introduction to Computer Science"
+  description  String?
+  credits      Int          @default(3)
+  department   String?
+  departmentId String?      @map("department_id")
+  status       CourseStatus @default(active)
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  teacher            Teacher?         @relation(fields: [teacherId], references: [id])
+  teacherId          String?          @map("teacher_id")
+  departmentRelation Department?      @relation(fields: [departmentId], references: [id])
+  enrollments        Enrollment[]
+  grades             Grade[]
+  recommendations    Recommendation[]
+
+  @@map("courses")
+}
+
+// Enrollment Model - Student-Course relationship
+model Enrollment {
+  id             String           @id @default(cuid())
+  studentId      String           @map("student_id")
+  courseId       String           @map("course_id")
+  semesterId     String           @map("semester_id")
+  enrollmentDate DateTime         @default(now()) @map("enrollment_date")
+  status         EnrollmentStatus @default(enrolled)
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  student  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course   Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  semester Semester @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, courseId, semesterId])
+  @@map("enrollments")
+}
+
+// Grade Model
+model Grade {
+  id          String       @id @default(cuid())
+  studentId   String       @map("student_id")
+  courseId    String       @map("course_id")
+  semesterId  String       @map("semester_id")
+  teacherId   String?      @map("teacher_id")
+  score       Float // Numeric score (0-100)
+  letterGrade GradeLetter? @map("letter_grade")
+  attendance  Float?       @default(100.0) // Percentage
+  trend       GradeTrend?
+  assignments Json? // Store assignment scores as JSON
+  comments    String?
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  student  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course   Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  semester Semester @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+  teacher  Teacher? @relation(fields: [teacherId], references: [id])
+
+  @@unique([studentId, courseId, semesterId])
+  @@map("grades")
+}
+
+// Document Model
+model Document {
+  id              String         @id @default(cuid())
+  studentId       String         @map("student_id")
+  name            String // e.g., "National ID (NRC)"
+  description     String?
+  required        Boolean        @default(false)
+  status          DocumentStatus @default(pending)
+  uploadedDate    DateTime?      @map("uploaded_date")
+  expiryDate      DateTime?      @map("expiry_date")
+  fileName        String?        @map("file_name")
+  fileSize        String?        @map("file_size") // e.g., "2.4 MB"
+  fileUrl         String?        @map("file_url") // Storage URL
+  rejectionReason String?        @map("rejection_reason")
+  reviewedBy      String?        @map("reviewed_by")
+  reviewedAt      DateTime?      @map("reviewed_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("documents")
+}
+
+// Recommendation Model
+model Recommendation {
+  id            String                 @id @default(cuid())
+  studentId     String                 @map("student_id")
+  teacherId     String                 @map("teacher_id")
+  courseCode    String?                @map("course_code") // Display code like "CS101"
+  courseId      String?                @map("course_id") // Foreign key reference
+  purpose       String // e.g., "Graduate School Application"
+  dateRequested DateTime               @default(now()) @map("date_requested")
+  deadline      DateTime?
+  status        RecommendationStatus   @default(pending)
+  priority      RecommendationPriority @default(medium)
+  letterText    String?                @map("letter_text")
+  submittedAt   DateTime?              @map("submitted_at")
+  createdAt     DateTime               @default(now()) @map("created_at")
+  updatedAt     DateTime               @updatedAt @map("updated_at")
+
+  // Relations
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  course  Course? @relation(fields: [courseId], references: [id])
+
+  @@map("recommendations")
+}
+
+// Student Semester GPA tracking
+model StudentSemester {
+  id            String   @id @default(cuid())
+  studentId     String   @map("student_id")
+  semesterId    String   @map("semester_id")
+  semesterGPA   Float?   @map("semester_gpa")
+  creditsEarned Int      @default(0) @map("credits_earned")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  student  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  semester Semester @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, semesterId])
+  @@map("student_semesters")
+}
