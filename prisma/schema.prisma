@@ -97,7 +97,8 @@ enum EnrollmentStatus {
 model User {
   id                String    @id @default(cuid())
   email             String    @unique
-  password          String    // Hashed password
+  clerkUserId       String    @unique
+  password          String?   // Hashed password (optional when using Clerk)
   firstName         String    @map("first_name")
   lastName          String    @map("last_name")
   dateOfBirth       DateTime? @map("date_of_birth")
@@ -112,8 +113,8 @@ model User {
   bio               String?
   role              Role      @default(student)
   status            String?   @default("active") // Generic status field
-   EmergencyContactName   String
-  EmergencyContactNumber String
+  EmergencyContactName   String?
+  EmergencyContactNumber String?
   createdAt              DateTime  @default(now()) @map("created_at")
   updatedAt              DateTime  @updatedAt @map("updated_at")
 

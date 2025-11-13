@@ -1,26 +1,33 @@
-import {
-  ClerkProvider,
-  SignInButton,
-  SignUpButton,
-  SignedIn,
-  SignedOut,
-  UserButton,
-} from '@clerk/nextjs'
+import Navigation from "@/components/navigation"
+import Hero from "@/components/hero"
+import Features from "@/components/features"
+import HowItWorks from "@/components/how-it-works"
+import Stats from "@/components/stats"
+import Scope from "@/components/scope"
+import Roles from "@/components/roles"
+import Testimonials from "@/components/testimonials"
+import Benefits from "@/components/benefits"
+import FAQ from "@/components/faq"
+import CTA from "@/components/cta"
+import Footer from "@/components/footer"
+import ScrollToTop from "@/components/scroll-to-top"
 
 export default function Home() {
   return (
- <>
- <SignedOut>
-              <SignInButton />
-              <SignUpButton>
-                <button className="bg-[#6c47ff] text-ceramic-white rounded-full font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 cursor-pointer">
-                  Sign Up
-                </button>
-              </SignUpButton>
-            </SignedOut>
-            <SignedIn>
-              <UserButton />
-            </SignedIn>
- </>
-  );
+    <div className="min-h-screen bg-background">
+      <Navigation />
+      <Hero />
+      <Features />
+      <HowItWorks />
+      <Stats />
+      <Scope />
+      <Roles />
+      <Testimonials />
+      <Benefits />
+      <FAQ />
+      <CTA />
+      <Footer />
+      <ScrollToTop />
+    </div>
+  )
 }
