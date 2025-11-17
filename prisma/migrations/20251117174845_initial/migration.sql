@@ -35,9 +35,9 @@ CREATE TYPE "EnrollmentStatus" AS ENUM ('enrolled', 'dropped', 'completed', 'fai
 CREATE TABLE "users" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
-    "password" TEXT NOT NULL,
+    "clerkId" TEXT NOT NULL,
     "first_name" TEXT NOT NULL,
-    "last_name" TEXT NOT NULL,
+    "last_name" TEXT,
     "date_of_birth" TIMESTAMP(3),
     "gender" "Gender",
     "nationality" TEXT,
@@ -50,8 +50,10 @@ CREATE TABLE "users" (
     "bio" TEXT,
     "role" "Role" NOT NULL DEFAULT 'student',
     "status" TEXT DEFAULT 'active',
-    "EmergencyContactName" TEXT NOT NULL,
-    "EmergencyContactNumber" TEXT NOT NULL,
+    "emergency_contact_name" TEXT,
+    "emergency_contact_number" TEXT,
+    "emergency_contact_relation" TEXT,
+    "emergency_contact_email" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -238,6 +240,9 @@ CREATE TABLE "student_semesters" (
 
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "users_clerkId_key" ON "users"("clerkId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "students_user_id_key" ON "students"("user_id");

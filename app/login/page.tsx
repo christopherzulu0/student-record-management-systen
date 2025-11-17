@@ -11,21 +11,19 @@ export default function LoginPage() {
   const router = useRouter()
 
   const handleSelectUser = (role: "student" | "teacher" | "admin") => {
-    let selectedUser
+    let email: string
     
     if (role === "admin") {
-      selectedUser = db.users.findByEmail("admin@university.edu")
+      email = "admin@university.edu"
     } else if (role === "teacher") {
-      selectedUser = db.users.findByEmail("teacher@university.edu")
+      email = "teacher@university.edu"
     } else {
-      selectedUser = db.users.findByEmail("student@university.edu")
+      email = "student@university.edu"
     }
 
-    if (selectedUser) {
-      // Store user in localStorage directly
-      localStorage.setItem("current_user", JSON.stringify(selectedUser))
-      router.push("/dashboard")
-    }
+    // Store only email in localStorage - role will be fetched from database
+    localStorage.setItem("current_user_email", email)
+    router.push("/dashboard")
   }
 
   const roles = [
@@ -61,7 +59,7 @@ export default function LoginPage() {
                   </div>
                   <div className="flex-1">
                     <p className="font-medium text-sm">{account.name}</p>
-                    <p className="text-xs text-gray-600">{account.email}</p>
+                  <p className="text-xs text-gray-600">{account.email}</p>
                     <p className="text-xs text-muted-foreground mt-1">{account.description}</p>
                   </div>
                   <div className="text-xs font-medium text-primary uppercase">{account.role}</div>

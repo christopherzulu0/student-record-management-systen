@@ -95,27 +95,29 @@ enum EnrollmentStatus {
 
 // User Model - Base authentication and profile
 model User {
-  id                String    @id @default(cuid())
-  email             String    @unique
-  password          String    // Hashed password
-  firstName         String    @map("first_name")
-  lastName          String    @map("last_name")
-  dateOfBirth       DateTime? @map("date_of_birth")
-  gender            Gender?
-  nationality       String?
-  phone             String?
-  address           String?
-  city              String?
-  state             String?
-  zipCode           String?   @map("zip_code")
-  country           String?
-  bio               String?
-  role              Role      @default(student)
-  status            String?   @default("active") // Generic status field
-   EmergencyContactName   String
-  EmergencyContactNumber String
-  createdAt              DateTime  @default(now()) @map("created_at")
-  updatedAt              DateTime  @updatedAt @map("updated_at")
+  id                       String    @id @default(cuid())
+  email                    String    @unique
+  clerkId                  String    @unique
+  firstName                String    @map("first_name")
+  lastName                 String?   @map("last_name")
+  dateOfBirth              DateTime? @map("date_of_birth")
+  gender                   Gender?
+  nationality              String?
+  phone                    String?
+  address                  String?
+  city                     String?
+  state                    String?
+  zipCode                  String?   @map("zip_code")
+  country                  String?
+  bio                      String?
+  role                     Role      @default(student)
+  status                   String?   @default("active") // Generic status field
+  emergencyContactName     String?   @map("emergency_contact_name")
+  emergencyContactNumber   String?   @map("emergency_contact_number")
+  emergencyContactRelation String?   @map("emergency_contact_relation")
+  emergencyContactEmail    String?   @map("emergency_contact_email")
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
 
   // Relations
   student Student?

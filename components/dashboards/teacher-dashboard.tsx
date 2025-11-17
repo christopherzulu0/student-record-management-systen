@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   XAxis,
@@ -37,53 +37,15 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useTeacherStats } from "@/lib/hooks/use-teacher-stats"
+import {
+  TeacherStatsSkeleton,
+  TeacherChartsSkeleton,
+  TeacherContentSkeleton,
+} from "./TeacherComponents/TeacherStatsSkeleton"
 
-const classData = [
-  { name: "CS101", students: 28, avgGrade: 86, attendance: 92, trend: "up" },
-  { name: "CS201", students: 25, avgGrade: 82, attendance: 88, trend: "down" },
-  { name: "CS301", students: 18, avgGrade: 88, attendance: 95, trend: "up" },
-]
-
-const gradeDistribution = [
-  { range: "A (90+)", count: 24, fill: "#10b981" },
-  { range: "B (80-89)", count: 42, fill: "#3b82f6" },
-  { range: "C (70-79)", count: 3, fill: "#f59e0b" },
-  { range: "D (60-69)", count: 2, fill: "#ef4444" },
-]
-
-const performanceTrend = [
-  { week: "Week 1", avg: 78, submissions: 20 },
-  { week: "Week 2", avg: 80, submissions: 22 },
-  { week: "Week 3", avg: 82, submissions: 25 },
-  { week: "Week 4", avg: 81, submissions: 23 },
-  { week: "Week 5", avg: 84, submissions: 27 },
-  { week: "Week 6", avg: 85, submissions: 28 },
-]
-
-const recentGrades = [
-  { student: "John Smith", course: "CS101", grade: 92, date: "Today", status: "Excellent" },
-  { student: "Jane Doe", course: "CS201", grade: 88, date: "Yesterday", status: "Good" },
-  { student: "Bob Johnson", course: "CS301", grade: 95, date: "2 days ago", status: "Excellent" },
-]
-
-const pendingLetters = [
-  { id: 1, student: "Sarah Williams", requestDate: "Nov 10", purpose: "Graduate School", priority: "high", days: 2 },
-  { id: 2, student: "Mike Brown", requestDate: "Nov 12", purpose: "Internship", priority: "medium", days: 5 },
-  { id: 3, student: "Emily Davis", requestDate: "Nov 13", purpose: "Scholarship", priority: "high", days: 1 },
-]
-
-const atRiskStudents = [
-  { name: "David Chen", course: "CS101", grade: 62, status: "At Risk", trend: "down" },
-  { name: "Lisa Park", course: "CS201", grade: 68, status: "Needs Attention", trend: "stable" },
-]
-
-const classMetrics = [
-  { label: "Students", value: 71, change: "+3 this month" },
-  { label: "Avg Engagement", value: "89%", change: "+5%" },
-  { label: "Assignment Rate", value: "96%", change: "+2%" },
-]
-
-export function TeacherDashboard() {
+function TeacherDashboardContent() {
+  const { data: stats } = useTeacherStats()
   const [activeTab, setActiveTab] = useState("overview")
 
   return (
@@ -141,9 +103,9 @@ export function TeacherDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">71</div>
+            <div className="text-3xl font-bold">{stats.totalStudents}</div>
             <p className="text-xs text-blue-100 mt-2 flex items-center gap-1">
-              <TrendingUp className="h-3 w-3" /> +3 this month
+              <TrendingUp className="h-3 w-3" /> {stats.classMetrics[0]?.change || "No change"}
             </p>
           </CardContent>
         </Card>
@@ -156,7 +118,7 @@ export function TeacherDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">3</div>
+            <div className="text-3xl font-bold">{stats.activeCourses}</div>
             <p className="text-xs text-green-100 mt-2">This semester</p>
           </CardContent>
         </Card>
@@ -169,7 +131,7 @@ export function TeacherDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">85.3</div>
+            <div className="text-3xl font-bold">{stats.classAverage.toFixed(1)}</div>
             <p className="text-xs text-purple-100 mt-2">Overall performance</p>
           </CardContent>
         </Card>
@@ -182,7 +144,7 @@ export function TeacherDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">5</div>
+            <div className="text-3xl font-bold">{stats.pendingLettersCount}</div>
             <p className="text-xs text-orange-100 mt-2">Awaiting completion</p>
           </CardContent>
         </Card>
@@ -195,7 +157,7 @@ export function TeacherDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">2</div>
+            <div className="text-3xl font-bold">{stats.atRisk}</div>
             <p className="text-xs text-red-100 mt-2">Needs intervention</p>
           </CardContent>
         </Card>
@@ -232,7 +194,7 @@ export function TeacherDashboard() {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={performanceTrend}>
+                  <AreaChart data={stats.performanceTrend}>
                     <defs>
                       <linearGradient id="colorAvg" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
@@ -279,7 +241,7 @@ export function TeacherDashboard() {
                 <ResponsiveContainer width="100%" height={280}>
                   <PieChart>
                     <Pie
-                      data={gradeDistribution}
+                      data={stats.gradeDistribution}
                       cx="50%"
                       cy="50%"
                       innerRadius={50}
@@ -287,7 +249,7 @@ export function TeacherDashboard() {
                       paddingAngle={2}
                       dataKey="count"
                     >
-                      {gradeDistribution.map((entry, idx) => (
+                      {stats.gradeDistribution.map((entry, idx) => (
                         <Cell key={`cell-${idx}`} fill={entry.fill} />
                       ))}
                     </Pie>
@@ -308,7 +270,7 @@ export function TeacherDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {classData.map((cls, idx) => (
+                {stats.classData.map((cls, idx) => (
                   <div key={idx} className="p-3 border rounded-lg hover:bg-accent transition-colors">
                     <div className="flex items-center justify-between mb-2">
                       <p className="font-semibold text-sm">{cls.name}</p>
@@ -335,7 +297,7 @@ export function TeacherDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {recentGrades.map((entry, idx) => (
+                {stats.recentGrades.slice(0, 3).map((entry, idx) => (
                   <div
                     key={idx}
                     className="flex items-center justify-between p-2 border rounded-lg bg-gradient-to-r from-purple-50 to-transparent dark:from-purple-950 dark:to-transparent"
@@ -361,7 +323,7 @@ export function TeacherDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {atRiskStudents.map((student, idx) => (
+                {stats.atRiskStudents.slice(0, 3).map((student, idx) => (
                   <div
                     key={idx}
                     className="flex items-center justify-between p-3 border border-red-200 rounded-lg bg-white dark:bg-slate-800"
@@ -393,7 +355,7 @@ export function TeacherDashboard() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-4 mb-6">
-                {classMetrics.map((metric, idx) => (
+                {stats.classMetrics.map((metric, idx) => (
                   <div
                     key={idx}
                     className="text-center p-4 rounded-lg bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-950 dark:to-indigo-900"
@@ -405,7 +367,7 @@ export function TeacherDashboard() {
                 ))}
               </div>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={performanceTrend}>
+                <LineChart data={stats.performanceTrend}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="week" />
                   <YAxis />
@@ -437,12 +399,12 @@ export function TeacherDashboard() {
                     <CardDescription>Prioritized by deadline</CardDescription>
                   </div>
                 </div>
-                <Badge className="bg-orange-100 text-orange-800">{pendingLetters.length} pending</Badge>
+                <Badge className="bg-orange-100 text-orange-800">{stats.pendingLetters.length} pending</Badge>
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {pendingLetters.map((letter) => (
+                {stats.pendingLetters.map((letter) => (
                   <div
                     key={letter.id}
                     className="flex items-start justify-between p-4 border rounded-lg hover:bg-accent transition-colors bg-gradient-to-r from-slate-50 to-transparent dark:from-slate-900 dark:to-transparent"
@@ -463,10 +425,12 @@ export function TeacherDashboard() {
                       <p className="text-xs text-muted-foreground">
                         {letter.purpose} • Requested {letter.requestDate}
                       </p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <Clock className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">{letter.days} days remaining</span>
-                      </div>
+                      {letter.days !== null && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <Clock className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">{letter.days} days remaining</span>
+                        </div>
+                      )}
                     </div>
                     <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
                       <Mail className="h-4 w-4 mr-1" />
@@ -522,5 +486,32 @@ export function TeacherDashboard() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export function TeacherDashboard() {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-8 pb-6">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 to-slate-800 dark:from-slate-950 dark:to-slate-900 p-6 rounded-xl text-white">
+            <div className="flex-1">
+              <h1 className="text-3xl md:text-4xl font-bold">Teaching Dashboard</h1>
+              <p className="text-slate-300 mt-2">Manage courses, grades, and student progress securely</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="p-4 rounded-lg bg-slate-700 animate-pulse" />
+            ))}
+          </div>
+          <TeacherStatsSkeleton />
+          <TeacherChartsSkeleton />
+          <TeacherContentSkeleton />
+        </div>
+      }
+    >
+      <TeacherDashboardContent />
+    </Suspense>
   )
 }

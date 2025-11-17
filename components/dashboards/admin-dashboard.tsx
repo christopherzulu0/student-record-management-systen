@@ -45,6 +45,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import CourseDialog from "./AdminComponents/CourseDialog"
+import TeacherDialog from "./AdminComponents/TeacherDialog"
+import SemesterDialog from "./AdminComponents/SemesterDialog"
+import { SemestersTabContent } from "./semesters-tab-content"
+import { CoursesTabContent } from "./courses-tab-content"
+import StatsCard from "./AdminComponents/StatsCard"
 
 const enrollmentData = [
   { month: "Jan", students: 450, teachers: 32, courses: 45 },
@@ -81,41 +87,8 @@ const systemAlerts = [
   { id: 3, type: "success", message: "Grade uploads completed successfully", action: "View" },
 ]
 
-const teachers = [
-  { id: "1", name: "Dr. Jane Smith", email: "jane.smith@university.edu", department: "Computer Science" },
-  { id: "2", name: "Dr. John Wilson", email: "john.wilson@university.edu", department: "Mathematics" },
-  { id: "3", name: "Prof. Emily Brown", email: "emily.brown@university.edu", department: "English" },
-]
 
-const assignedCourses = [
-  {
-    id: "1",
-    code: "CS101",
-    name: "Intro to Computer Science",
-    teacher: "Dr. Jane Smith",
-    semester: "Fall 2024",
-    enrolled: "28/30",
-    status: "Active",
-  },
-  {
-    id: "2",
-    code: "MATH201",
-    name: "Calculus II",
-    teacher: "Dr. John Wilson",
-    semester: "Fall 2024",
-    enrolled: "24/25",
-    status: "Active",
-  },
-  {
-    id: "3",
-    code: "ENG102",
-    name: "English Composition",
-    teacher: "Prof. Emily Brown",
-    semester: "Fall 2024",
-    enrolled: "32/35",
-    status: "Active",
-  },
-]
+
 
 const departmentMetrics = [
   { name: "Computer Science", value: 125, color: "#3b82f6" },
@@ -124,38 +97,6 @@ const departmentMetrics = [
   { name: "Physics", value: 87, color: "#8b5cf6" },
 ]
 
-const semesters = [
-  {
-    id: "1",
-    name: "Fall 2024",
-    year: 2024,
-    startDate: "2024-09-01",
-    endDate: "2024-12-15",
-    status: "active",
-    registrationDeadline: "2024-08-15",
-    courseCount: 52,
-  },
-  {
-    id: "2",
-    name: "Spring 2025",
-    year: 2025,
-    startDate: "2025-01-15",
-    endDate: "2025-05-10",
-    status: "draft",
-    registrationDeadline: "2024-12-20",
-    courseCount: 0,
-  },
-  {
-    id: "3",
-    name: "Summer 2025",
-    year: 2025,
-    startDate: "2025-06-01",
-    endDate: "2025-08-15",
-    status: "planning",
-    registrationDeadline: "2025-05-01",
-    courseCount: 0,
-  },
-]
 
 const recentActivity = [
   { id: 1, action: "New student registered", timestamp: "2 hours ago", icon: UserCheck },
@@ -165,306 +106,76 @@ const recentActivity = [
 ]
 
 export function AdminDashboard() {
-  const [isAddCourseOpen, setIsAddCourseOpen] = useState(false)
-  const [isAssignTeacherOpen, setIsAssignTeacherOpen] = useState(false)
-  const [isAddSemesterOpen, setIsAddSemesterOpen] = useState(false)
-  const [selectedCourse, setSelectedCourse] = useState("")
-  const [selectedTeacher, setSelectedTeacher] = useState("")
   const [activeTab, setActiveTab] = useState("overview")
 
   return (
-    <div className="space-y-8">
+    <div className="w-full max-w-full overflow-hidden space-y-6 md:space-y-8 px-4 md:px-6 pb-6">
       {/* Enhanced Header with System Status */}
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-3xl md:text-4xl font-bold">Administration</h1>
-            <p className="text-muted-foreground mt-1">Manage students, courses, faculty, and system security</p>
+      <div className="flex flex-col gap-2 w-full">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 w-full">
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold truncate">Administration</h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-1 line-clamp-2">
+              Manage students, courses, faculty, and system security
+            </p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 px-3 py-1">
+            <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 px-3 py-1 text-xs md:text-sm whitespace-nowrap">
               ✓ System Secure
             </Badge>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-l-4 border-l-green-500 bg-green-50 dark:bg-green-950">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Shield className="h-5 w-5 text-green-600" />
-              Encryption Status
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-green-900 dark:text-green-100">100%</p>
-            <p className="text-xs text-green-700 dark:text-green-300 mt-1">All records encrypted with AES-256</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-blue-500 bg-blue-50 dark:bg-blue-950">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Activity className="h-5 w-5 text-blue-600" />
-              Last Backup
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">Today</p>
-            <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">2:30 AM • Automated daily backup</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-purple-500 bg-purple-50 dark:bg-purple-950">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Users className="h-5 w-5 text-purple-600" />
-              Access Controls
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">3 Roles</p>
-            <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">Granular role-based permissions</p>
-          </CardContent>
-        </Card>
-      </div>
+  
 
       {/* Key Metrics Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Card className="border-none bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-lg hover:shadow-xl transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium opacity-90">Total Students</CardTitle>
-            <Users className="h-4 w-4 opacity-70" />
-          </CardHeader>
-          <CardContent className="space-y-1">
-            <div className="text-3xl font-bold">585</div>
-            <p className="text-xs opacity-75">+35 this month</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-none bg-gradient-to-br from-green-600 to-green-700 text-white shadow-lg hover:shadow-xl transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium opacity-90">Faculty Members</CardTitle>
-            <UserCheck className="h-4 w-4 opacity-70" />
-          </CardHeader>
-          <CardContent className="space-y-1">
-            <div className="text-3xl font-bold">38</div>
-            <p className="text-xs opacity-75">Active instructors</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-none bg-gradient-to-br from-purple-600 to-purple-700 text-white shadow-lg hover:shadow-xl transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium opacity-90">Courses</CardTitle>
-            <BookOpen className="h-4 w-4 opacity-70" />
-          </CardHeader>
-          <CardContent className="space-y-1">
-            <div className="text-3xl font-bold">52</div>
-            <p className="text-xs opacity-75">Current semester</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-none bg-gradient-to-br from-orange-600 to-orange-700 text-white shadow-lg hover:shadow-xl transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium opacity-90">System GPA</CardTitle>
-            <TrendingUp className="h-4 w-4 opacity-70" />
-          </CardHeader>
-          <CardContent className="space-y-1">
-            <div className="text-3xl font-bold">3.21</div>
-            <p className="text-xs opacity-75">Average</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-none bg-gradient-to-br from-red-600 to-red-700 text-white shadow-lg hover:shadow-xl transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium opacity-90">At Risk</CardTitle>
-            <AlertCircle className="h-4 w-4 opacity-70" />
-          </CardHeader>
-          <CardContent className="space-y-1">
-            <div className="text-3xl font-bold">15</div>
-            <p className="text-xs opacity-75">Students</p>
-          </CardContent>
-        </Card>
-      </div>
+  <StatsCard/>
 
       {/* Quick Actions */}
-      <Card className="border-none shadow-md">
-        <CardHeader>
-          <CardTitle className="text-lg">Quick Actions</CardTitle>
+      <Card className="border-none shadow-md overflow-hidden w-full">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base md:text-lg">Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-3">
-            <Dialog open={isAddCourseOpen} onOpenChange={setIsAddCourseOpen}>
-              <DialogTrigger asChild>
-                <Button className="gap-2 bg-blue-600 hover:bg-blue-700">
-                  <Plus className="h-4 w-4" />
-                  Add Course
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add New Course</DialogTitle>
-                  <DialogDescription>Create a new course for the university</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="course-code">Course Code</Label>
-                    <Input id="course-code" placeholder="e.g., CS102" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="course-name">Course Name</Label>
-                    <Input id="course-name" placeholder="e.g., Advanced Web Development" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="course-credits">Credits</Label>
-                    <Input id="course-credits" type="number" placeholder="e.g., 3" />
-                  </div>
-                  <Button className="w-full bg-blue-600 hover:bg-blue-700">Create Course</Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={isAssignTeacherOpen} onOpenChange={setIsAssignTeacherOpen}>
-              <DialogTrigger asChild>
-                <Button className="gap-2 bg-green-600 hover:bg-green-700">
-                  <UserCheck className="h-4 w-4" />
-                  Assign Teacher
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Assign Teacher to Course</DialogTitle>
-                  <DialogDescription>Assign a teacher to teach a specific course</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="select-course">Course</Label>
-                    <Select value={selectedCourse} onValueChange={setSelectedCourse}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a course" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="cs101">CS101 - Intro to CS</SelectItem>
-                        <SelectItem value="math201">MATH201 - Calculus II</SelectItem>
-                        <SelectItem value="eng102">ENG102 - English Composition</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="select-teacher">Teacher</Label>
-                    <Select value={selectedTeacher} onValueChange={setSelectedTeacher}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a teacher" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {teachers.map((teacher) => (
-                          <SelectItem key={teacher.id} value={teacher.id}>
-                            {teacher.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="semester">Semester</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select semester" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="fall">Fall 2024</SelectItem>
-                        <SelectItem value="spring">Spring 2025</SelectItem>
-                        <SelectItem value="summer">Summer 2025</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button className="w-full bg-green-600 hover:bg-green-700">Assign Course</Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={isAddSemesterOpen} onOpenChange={setIsAddSemesterOpen}>
-              <DialogTrigger asChild>
-                <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700">
-                  <Calendar className="h-4 w-4" />
-                  Add Semester
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create New Semester</DialogTitle>
-                  <DialogDescription>Add a new academic semester to the system</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="semester-name">Semester Name</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select semester" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="fall">Fall</SelectItem>
-                        <SelectItem value="spring">Spring</SelectItem>
-                        <SelectItem value="summer">Summer</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="semester-year">Year</Label>
-                    <Input id="semester-year" type="number" placeholder="e.g., 2025" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="start-date">Start Date</Label>
-                    <Input id="start-date" type="date" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="end-date">End Date</Label>
-                    <Input id="end-date" type="date" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="registration-deadline">Registration Deadline</Label>
-                    <Input id="registration-deadline" type="date" />
-                  </div>
-                  <Button className="w-full bg-indigo-600 hover:bg-indigo-700">Create Semester</Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            <Button variant="outline">View Reports</Button>
-            <Button variant="outline">System Settings</Button>
+          <div className="flex flex-wrap gap-2 md:gap-3">
+            <CourseDialog/>
+            <TeacherDialog/>
+            <SemesterDialog/>
+            <Button variant="outline" className="text-xs md:text-sm whitespace-nowrap">View Reports</Button>
+            <Button variant="outline" className="text-xs md:text-sm whitespace-nowrap">System Settings</Button>
           </div>
         </CardContent>
       </Card>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="semesters">Semesters</TabsTrigger>
-          <TabsTrigger value="courses">Courses</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full overflow-hidden">
+        <TabsList className="grid w-full grid-cols-3 h-auto">
+          <TabsTrigger value="overview" className="text-xs md:text-sm truncate">Overview</TabsTrigger>
+          <TabsTrigger value="semesters" className="text-xs md:text-sm truncate">Semesters</TabsTrigger>
+          <TabsTrigger value="courses" className="text-xs md:text-sm truncate">Courses</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
+        <TabsContent value="overview" className="space-y-4 md:space-y-6 mt-4 md:mt-6">
           {/* Recent Activity and Alerts */}
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card className="border-none shadow-md">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Activity className="h-5 w-5" />
-                  Recent Activity
+          <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2 w-full">
+            <Card className="border-none shadow-md overflow-hidden">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm md:text-base flex items-center gap-2">
+                  <Activity className="h-4 w-4 md:h-5 md:w-5 flex-shrink-0" />
+                  <span className="truncate">Recent Activity</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+              <CardContent className="overflow-hidden">
+                <div className="space-y-3 md:space-y-4">
                   {recentActivity.map((activity) => (
-                    <div key={activity.id} className="flex items-start gap-3 pb-3 border-b last:border-b-0">
-                      <div className="mt-1 p-2 bg-muted rounded-lg">
-                        <activity.icon className="h-4 w-4" />
+                    <div key={activity.id} className="flex items-start gap-2 md:gap-3 pb-3 border-b last:border-b-0 min-w-0">
+                      <div className="mt-1 p-1.5 md:p-2 bg-muted rounded-lg flex-shrink-0">
+                        <activity.icon className="h-3 w-3 md:h-4 md:w-4" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">{activity.action}</p>
-                        <p className="text-xs text-muted-foreground">{activity.timestamp}</p>
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <p className="text-xs md:text-sm font-medium truncate">{activity.action}</p>
+                        <p className="text-xs text-muted-foreground truncate">{activity.timestamp}</p>
                       </div>
                     </div>
                   ))}
@@ -473,22 +184,22 @@ export function AdminDashboard() {
             </Card>
 
             {/* Alert Section */}
-            <Card className="border-l-4 border-l-yellow-500 border-none shadow-md bg-yellow-50 dark:bg-yellow-950">
+            <Card className="border-l-4 border-l-yellow-500 border-none shadow-md bg-yellow-50 dark:bg-yellow-950 overflow-hidden">
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
-                  System Alerts
+                <CardTitle className="flex items-center gap-2 text-sm md:text-base">
+                  <AlertCircle className="h-4 w-4 md:h-5 md:w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />
+                  <span className="truncate">System Alerts</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="overflow-hidden">
                 <div className="space-y-2">
                   {systemAlerts.map((alert) => (
                     <div
                       key={alert.id}
-                      className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-lg border border-yellow-200 dark:border-yellow-800"
+                      className="flex items-center justify-between gap-2 p-2 md:p-3 bg-white dark:bg-slate-800 rounded-lg border border-yellow-200 dark:border-yellow-800 min-w-0"
                     >
-                      <p className="text-sm">{alert.message}</p>
-                      <Button size="sm" variant="outline" className="ml-auto bg-transparent">
+                      <p className="text-xs md:text-sm truncate flex-1 min-w-0">{alert.message}</p>
+                      <Button size="sm" variant="outline" className="ml-2 bg-transparent flex-shrink-0 text-xs whitespace-nowrap">
                         {alert.action}
                       </Button>
                     </div>
@@ -499,226 +210,124 @@ export function AdminDashboard() {
           </div>
 
           {/* Charts and Analytics */}
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card className="border-none shadow-md">
-              <CardHeader>
-                <CardTitle className="text-base">Enrollment Trends</CardTitle>
-                <CardDescription className="text-xs">5-month overview</CardDescription>
+          <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2 w-full">
+            <Card className="border-none shadow-md overflow-hidden">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm md:text-base truncate">Enrollment Trends</CardTitle>
+                <CardDescription className="text-xs truncate">5-month overview</CardDescription>
               </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={280}>
-                  <LineChart data={enrollmentData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="month" style={{ fontSize: "0.75rem" }} />
-                    <YAxis style={{ fontSize: "0.75rem" }} />
-                    <Tooltip contentStyle={{ borderRadius: "0.5rem", border: "1px solid hsl(var(--border))" }} />
-                    <Legend />
-                    <Line type="monotone" dataKey="students" stroke="#3b82f6" strokeWidth={2} name="Students" />
-                    <Line type="monotone" dataKey="courses" stroke="#10b981" strokeWidth={2} name="Courses" />
-                  </LineChart>
-                </ResponsiveContainer>
+              <CardContent className="overflow-hidden">
+                <div className="w-full overflow-x-auto">
+                  <ResponsiveContainer width="100%" height={250} minHeight={200}>
+                    <LineChart data={enrollmentData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="month" style={{ fontSize: "0.7rem" }} />
+                      <YAxis style={{ fontSize: "0.7rem" }} />
+                      <Tooltip contentStyle={{ borderRadius: "0.5rem", border: "1px solid hsl(var(--border))", fontSize: "0.75rem" }} />
+                      <Legend wrapperStyle={{ fontSize: "0.75rem" }} />
+                      <Line type="monotone" dataKey="students" stroke="#3b82f6" strokeWidth={2} name="Students" />
+                      <Line type="monotone" dataKey="courses" stroke="#10b981" strokeWidth={2} name="Courses" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
 
-            <Card className="border-none shadow-md">
-              <CardHeader>
-                <CardTitle className="text-base">Department Distribution</CardTitle>
-                <CardDescription className="text-xs">Student enrollment by department</CardDescription>
+            <Card className="border-none shadow-md overflow-hidden">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm md:text-base truncate">Department Distribution</CardTitle>
+                <CardDescription className="text-xs truncate">Student enrollment by department</CardDescription>
               </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={280}>
-                  <PieChart>
-                    <Pie
-                      data={departmentMetrics}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, value }) => `${name}: ${value}`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {departmentMetrics.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+              <CardContent className="overflow-hidden">
+                <div className="w-full overflow-x-auto">
+                  <ResponsiveContainer width="100%" height={250} minHeight={200}>
+                    <PieChart>
+                      <Pie
+                        data={departmentMetrics}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, value }) => `${name}: ${value}`}
+                        outerRadius={70}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {departmentMetrics.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip contentStyle={{ borderRadius: "0.5rem", border: "1px solid hsl(var(--border))", fontSize: "0.75rem" }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card className="border-none shadow-md">
-              <CardHeader>
-                <CardTitle className="text-base">GPA Distribution</CardTitle>
-                <CardDescription className="text-xs">Student performance breakdown</CardDescription>
+          <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2 w-full">
+            <Card className="border-none shadow-md overflow-hidden">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm md:text-base truncate">GPA Distribution</CardTitle>
+                <CardDescription className="text-xs truncate">Student performance breakdown</CardDescription>
               </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={performanceData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="gpa" style={{ fontSize: "0.75rem" }} />
-                    <YAxis style={{ fontSize: "0.75rem" }} />
-                    <Tooltip contentStyle={{ borderRadius: "0.5rem", border: "1px solid hsl(var(--border))" }} />
-                    <Bar dataKey="count" fill="#3b82f6" radius={[8, 8, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+              <CardContent className="overflow-hidden">
+                <div className="w-full overflow-x-auto">
+                  <ResponsiveContainer width="100%" height={250} minHeight={200}>
+                    <BarChart data={performanceData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="gpa" style={{ fontSize: "0.7rem" }} />
+                      <YAxis style={{ fontSize: "0.7rem" }} />
+                      <Tooltip contentStyle={{ borderRadius: "0.5rem", border: "1px solid hsl(var(--border))", fontSize: "0.75rem" }} />
+                      <Bar dataKey="count" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
 
-            <Card className="border-none shadow-md">
-              <CardHeader>
-                <CardTitle className="text-base">Department Performance</CardTitle>
-                <CardDescription className="text-xs">Enrollment vs average GPA</CardDescription>
+            <Card className="border-none shadow-md overflow-hidden">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm md:text-base truncate">Department Performance</CardTitle>
+                <CardDescription className="text-xs truncate">Enrollment vs average GPA</CardDescription>
               </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={departmentData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="dept" angle={-45} textAnchor="end" height={80} style={{ fontSize: "0.75rem" }} />
-                    <YAxis yAxisId="left" style={{ fontSize: "0.75rem" }} />
-                    <YAxis yAxisId="right" orientation="right" style={{ fontSize: "0.75rem" }} />
-                    <Tooltip contentStyle={{ borderRadius: "0.5rem", border: "1px solid hsl(var(--border))" }} />
-                    <Legend />
-                    <Bar yAxisId="left" dataKey="enrollment" fill="#3b82f6" name="Enrollment" radius={[8, 8, 0, 0]} />
-                    <Bar yAxisId="right" dataKey="avgGpa" fill="#10b981" name="Avg GPA" radius={[8, 8, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+              <CardContent className="overflow-hidden">
+                <div className="w-full overflow-x-auto">
+                  <ResponsiveContainer width="100%" height={250} minHeight={200}>
+                    <BarChart data={departmentData} margin={{ top: 5, right: 10, left: 0, bottom: 60 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis 
+                        dataKey="dept" 
+                        angle={-45} 
+                        textAnchor="end" 
+                        height={80} 
+                        style={{ fontSize: "0.7rem" }}
+                        interval={0}
+                      />
+                      <YAxis yAxisId="left" style={{ fontSize: "0.7rem" }} />
+                      <YAxis yAxisId="right" orientation="right" style={{ fontSize: "0.7rem" }} />
+                      <Tooltip contentStyle={{ borderRadius: "0.5rem", border: "1px solid hsl(var(--border))", fontSize: "0.75rem" }} />
+                      <Legend wrapperStyle={{ fontSize: "0.75rem" }} />
+                      <Bar yAxisId="left" dataKey="enrollment" fill="#3b82f6" name="Enrollment" radius={[8, 8, 0, 0]} />
+                      <Bar yAxisId="right" dataKey="avgGpa" fill="#10b981" name="Avg GPA" radius={[8, 8, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
-        <TabsContent value="semesters" className="space-y-4">
-          <Card className="border-none shadow-md">
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg">Semester Management</CardTitle>
-                  <CardDescription>Create and manage academic semesters</CardDescription>
-                </div>
-                <Calendar className="h-5 w-5 text-muted-foreground" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-3">
-                {semesters.map((semester) => (
-                  <Card key={semester.id} className="border shadow-sm hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle className="text-base">{semester.name}</CardTitle>
-                          <CardDescription className="text-xs">{semester.year}</CardDescription>
-                        </div>
-                        <Badge
-                          className={
-                            semester.status === "active"
-                              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                              : semester.status === "draft"
-                                ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100"
-                                : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100"
-                          }
-                        >
-                          {semester.status.charAt(0).toUpperCase() + semester.status.slice(1)}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-xs">
-                            {semester.startDate} to {semester.endDate}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-xs">Register by {semester.registrationDeadline}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <BookOpen className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-xs">{semester.courseCount} courses</span>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 pt-3">
-                        <Button size="sm" variant="outline" className="flex-1 bg-transparent">
-                          <Edit2 className="h-3 w-3 mr-1" />
-                          Edit
-                        </Button>
-                        <Button size="sm" variant="ghost" className="flex-1">
-                          <Trash2 className="h-3 w-3 mr-1 text-red-500" />
-                          Delete
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="semesters" className="space-y-4 mt-4 md:mt-6 overflow-hidden">
+          <div className="w-full overflow-x-auto">
+            <SemestersTabContent />
+          </div>
         </TabsContent>
 
         {/* Courses Tab */}
-        <TabsContent value="courses" className="space-y-4">
-          <Card className="border-none shadow-md">
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg">Course Assignments</CardTitle>
-                  <CardDescription>Manage courses and teacher assignments</CardDescription>
-                </div>
-                <BookOpen className="h-5 w-5 text-muted-foreground" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {assignedCourses.map((course) => (
-                  <div
-                    key={course.id}
-                    className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-accent transition-colors"
-                  >
-                    <div className="flex items-start gap-4 flex-1">
-                      <div className="pt-1">
-                        <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100">
-                          {course.code}
-                        </Badge>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm">{course.name}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Instructor: {course.teacher}</p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <Clock className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground">{course.semester}</span>
-                          <span className="text-xs text-muted-foreground">•</span>
-                          <Activity className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground">{course.enrolled} enrolled</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Badge
-                        className={
-                          course.status === "Active"
-                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                            : ""
-                        }
-                      >
-                        {course.status}
-                      </Badge>
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="courses" className="space-y-4 mt-4 md:mt-6 overflow-hidden">
+          <div className="w-full overflow-x-auto">
+            <CoursesTabContent />
+          </div>
         </TabsContent>
       </Tabs>
     </div>

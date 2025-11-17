@@ -17,15 +17,30 @@ export function Sidebar() {
   const pathname = usePathname()
 
   useEffect(() => {
-    // Get user from localStorage
-    const stored = localStorage.getItem("current_user")
-    if (stored) {
+    // Fetch user from database via API - uses Clerk session to get authenticated user
+    // Role comes from database users table
+    const fetchUser = async () => {
       try {
-        setUser(JSON.parse(stored))
+        const response = await fetch('/api/user/me')
+        if (!response.ok) {
+          console.error("Failed to fetch user from database")
+          return
+        }
+
+        const userData = await response.json()
+        setUser({
+          id: userData.id,
+          email: userData.email,
+          name: userData.name,
+          role: userData.role, // Role fetched from database users table
+          createdAt: new Date(userData.createdAt),
+        })
       } catch (e) {
-        console.error("Error parsing user from localStorage:", e)
+        console.error("Error fetching user from database:", e)
       }
     }
+
+    fetchUser()
   }, [])
 
   const getInitials = (name?: string) => {
@@ -142,9 +157,9 @@ export function Sidebar() {
                 {items.map((item) => {
                   const active = isActive(item.href)
                   return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
+          <Link
+            key={item.href}
+            href={item.href}
                       className={cn(
                         "group relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
                         "hover:bg-sidebar-accent/80 hover:text-sidebar-accent-foreground hover:translate-x-1",
@@ -164,20 +179,20 @@ export function Sidebar() {
                             ? "bg-primary/20 text-primary"
                             : "bg-sidebar-accent/50 text-sidebar-foreground/70 group-hover:bg-primary/10 group-hover:text-primary"
                         )}
-                      >
+          >
                         <item.icon className="w-4 h-4" />
                       </div>
                       <span className="flex-1">{item.label}</span>
                       {active && (
                         <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                       )}
-                    </Link>
+          </Link>
                   )
                 })}
               </div>
             </div>
-          ))}
-        </nav>
+        ))}
+      </nav>
       </ScrollArea>
 
       {/* Footer */}
