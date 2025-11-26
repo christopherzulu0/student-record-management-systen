@@ -186,6 +186,8 @@ export async function GET() {
         uploadedDate: doc.uploadedDate?.toISOString(),
         fileName: doc.fileName || undefined,
         fileSize: doc.fileSize || undefined,
+        fileUrl: doc.fileUrl || undefined,
+        rejectionReason: doc.rejectionReason || undefined,
       }))
 
       return {

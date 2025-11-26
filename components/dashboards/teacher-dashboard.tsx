@@ -426,10 +426,10 @@ function TeacherDashboardContent() {
                         {letter.purpose} • Requested {letter.requestDate}
                       </p>
                       {letter.days !== null && (
-                        <div className="flex items-center gap-2 mt-2">
-                          <Clock className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground">{letter.days} days remaining</span>
-                        </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Clock className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">{letter.days} days remaining</span>
+                      </div>
                       )}
                     </div>
                     <Button size="sm" className="bg-blue-600 hover:bg-blue-700">

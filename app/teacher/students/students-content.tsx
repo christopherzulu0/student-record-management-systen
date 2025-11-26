@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Sheet,
   SheetContent,
@@ -15,6 +16,14 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   Pagination,
   PaginationContent,
@@ -24,19 +33,26 @@ import {
   PaginationPrevious,
   PaginationEllipsis,
 } from "@/components/ui/pagination"
-import { Search, Mail, BarChart3, AlertCircle, FileText, CheckCircle2, Clock, FileX, Download, Eye, Shield } from "lucide-react"
+import { Search, Mail, BarChart3, AlertCircle, FileText, CheckCircle2, Clock, FileX, Download, Eye, Shield, Check, X, RotateCcw } from "lucide-react"
 import { useTeacherStudents, type Student, type DocumentStatus } from "@/lib/hooks/use-teacher-students"
+import { useUpdateDocumentStatus } from "@/lib/hooks/use-teacher-documents"
 import { EnrollStudentDialog } from "@/components/teacher/EnrollStudentDialog"
 
 export function MyStudentsPageContent() {
   const { data } = useTeacherStudents()
   const myStudents = data.students
+  const updateDocumentStatusMutation = useUpdateDocumentStatus()
   const [searchTerm, setSearchTerm] = useState("")
   const [sortBy, setSortBy] = useState("name")
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(5)
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
   const [isDocumentsSheetOpen, setIsDocumentsSheetOpen] = useState(false)
+  const [selectedDocument, setSelectedDocument] = useState<{ id: string; name: string } | null>(null)
+  const [actionDialogOpen, setActionDialogOpen] = useState(false)
+  const [actionType, setActionType] = useState<"approve" | "reject" | "resubmit" | null>(null)
+  const [rejectionReason, setRejectionReason] = useState("")
+  const [resubmissionReason, setResubmissionReason] = useState("")
 
   const filteredStudents = myStudents
     .filter(
@@ -129,7 +145,12 @@ export function MyStudentsPageContent() {
     setIsDocumentsSheetOpen(true)
   }
 
-  const requiredDocs = selectedStudent?.documents?.filter((doc) => doc.required) || []
+  // Get fresh student data after document updates - always use latest from query
+  const currentStudent = selectedStudent ? myStudents.find((s) => s.id === selectedStudent.id) : null
+  const displayStudent = currentStudent || selectedStudent
+  const studentDocuments = displayStudent?.documents || []
+  
+  const requiredDocs = studentDocuments.filter((doc) => doc.required)
   const completedDocs = requiredDocs.filter((doc) => doc.status === "approved").length
   const completionPercentage =
     requiredDocs.length > 0 ? Math.round((completedDocs / requiredDocs.length) * 100) : 0
@@ -395,16 +416,16 @@ export function MyStudentsPageContent() {
           <SheetHeader className="px-4 sm:px-6 pt-6 pb-4 border-b flex-shrink-0">
             <SheetTitle className="flex items-center gap-2 text-base sm:text-lg lg:text-xl">
               <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0" />
-              <span className="truncate">{selectedStudent?.name}'s Documents</span>
+              <span className="truncate">{displayStudent?.name}'s Documents</span>
             </SheetTitle>
             <SheetDescription className="text-xs sm:text-sm mt-1">
-              Student ID: {selectedStudent?.id}
+              Student ID: {displayStudent?.id}
             </SheetDescription>
           </SheetHeader>
 
           <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 min-h-0">
             <div className="space-y-4 sm:space-y-6">
-              {selectedStudent && (
+              {displayStudent && (
                 <>
                   {/* Completion Stats */}
                   <div className="grid grid-cols-1 gap-3 sm:gap-4">
@@ -444,7 +465,7 @@ export function MyStudentsPageContent() {
                         </CardHeader>
                         <CardContent className="pt-0">
                           <div className="text-base sm:text-lg font-bold text-amber-600 dark:text-amber-400 text-center">
-                            {selectedStudent.documents?.filter((doc) => doc.status === "uploaded").length || 0}
+                            {studentDocuments.filter((doc) => doc.status === "uploaded").length || 0}
                           </div>
                         </CardContent>
                       </Card>
@@ -473,13 +494,13 @@ export function MyStudentsPageContent() {
                     <CardHeader className="pb-3">
                       <CardTitle className="text-sm sm:text-base">Uploaded Documents</CardTitle>
                       <CardDescription className="text-xs">
-                        {selectedStudent.documents?.length || 0} document(s) found
+                        {studentDocuments.length || 0} document(s) found
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-0">
-                      {selectedStudent.documents && selectedStudent.documents.length > 0 ? (
+                      {studentDocuments && studentDocuments.length > 0 ? (
                         <div className="space-y-3">
-                          {selectedStudent.documents.map((document) => {
+                          {studentDocuments.map((document) => {
                             const statusBadge = getDocumentStatusBadge(document.status)
                             return (
                               <div
@@ -520,26 +541,125 @@ export function MyStudentsPageContent() {
                                       )}
                                     </div>
                                   </div>
-                                  {(document.status === "approved" || document.status === "uploaded") && document.fileName && (
+                                  {document.fileUrl && (
                                     <div className="flex items-center gap-2 flex-shrink-0 pt-1 border-t">
-                                      {document.status === "approved" && (
-                                        <>
-                                          <Button variant="outline" size="sm" className="text-xs h-8 flex-1">
-                                            <Eye className="w-3 h-3 mr-1.5" />
-                                            View
-                                          </Button>
-                                          <Button variant="outline" size="sm" className="text-xs h-8 flex-1">
-                                            <Download className="w-3 h-3 mr-1.5" />
-                                            Download
-                                          </Button>
-                                        </>
-                                      )}
-                                      {document.status === "uploaded" && (
-                                        <Button variant="outline" size="sm" className="text-xs h-8 w-full">
-                                          <Eye className="w-3 h-3 mr-1.5" />
-                                          Preview
-                                        </Button>
-                                      )}
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-xs h-8 flex-1"
+                                        onClick={() => {
+                                          if (document.fileUrl) {
+                                            window.open(document.fileUrl, "_blank")
+                                          }
+                                        }}
+                                      >
+                                        <Eye className="w-3 h-3 mr-1.5" />
+                                        View
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-xs h-8 flex-1"
+                                        onClick={() => {
+                                          if (document.fileUrl) {
+                                            const link = window.document.createElement("a")
+                                            link.href = document.fileUrl
+                                            link.download = document.fileName || "document"
+                                            link.target = "_blank"
+                                            window.document.body.appendChild(link)
+                                            link.click()
+                                            window.document.body.removeChild(link)
+                                          }
+                                        }}
+                                      >
+                                        <Download className="w-3 h-3 mr-1.5" />
+                                        Download
+                                      </Button>
+                                    </div>
+                                  )}
+                                  {document.status === "uploaded" && (
+                                    <div className="flex items-center gap-2 flex-shrink-0 pt-2 border-t">
+                                      <Button
+                                        variant="default"
+                                        size="sm"
+                                        className="text-xs h-8 flex-1 bg-green-600 hover:bg-green-700"
+                                        onClick={() => {
+                                          setSelectedDocument({ id: document.id, name: document.name })
+                                          setActionType("approve")
+                                          setActionDialogOpen(true)
+                                        }}
+                                        disabled={updateDocumentStatusMutation.isPending}
+                                      >
+                                        <Check className="w-3 h-3 mr-1.5" />
+                                        Approve
+                                      </Button>
+                                      <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        className="text-xs h-8 flex-1"
+                                        onClick={() => {
+                                          setSelectedDocument({ id: document.id, name: document.name })
+                                          setActionType("reject")
+                                          setRejectionReason("")
+                                          setActionDialogOpen(true)
+                                        }}
+                                        disabled={updateDocumentStatusMutation.isPending}
+                                      >
+                                        <X className="w-3 h-3 mr-1.5" />
+                                        Reject
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-xs h-8 flex-1"
+                                        onClick={() => {
+                                          setSelectedDocument({ id: document.id, name: document.name })
+                                          setActionType("resubmit")
+                                          setResubmissionReason("")
+                                          setActionDialogOpen(true)
+                                        }}
+                                        disabled={updateDocumentStatusMutation.isPending}
+                                      >
+                                        <RotateCcw className="w-3 h-3 mr-1.5" />
+                                        Resubmit
+                                      </Button>
+                                    </div>
+                                  )}
+                                  {document.status === "approved" && (
+                                    <div className="flex items-center gap-2 flex-shrink-0 pt-2 border-t">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-xs h-8 flex-1"
+                                        onClick={() => {
+                                          setSelectedDocument({ id: document.id, name: document.name })
+                                          setActionType("resubmit")
+                                          setResubmissionReason("")
+                                          setActionDialogOpen(true)
+                                        }}
+                                        disabled={updateDocumentStatusMutation.isPending}
+                                      >
+                                        <RotateCcw className="w-3 h-3 mr-1.5" />
+                                        Request Resubmission
+                                      </Button>
+                                    </div>
+                                  )}
+                                  {document.status === "rejected" && (
+                                    <div className="flex items-center gap-2 flex-shrink-0 pt-2 border-t">
+                                      <Button
+                                        variant="default"
+                                        size="sm"
+                                        className="text-xs h-8 flex-1 bg-green-600 hover:bg-green-700"
+                                        onClick={() => {
+                                          setSelectedDocument({ id: document.id, name: document.name })
+                                          setActionType("approve")
+                                          setActionDialogOpen(true)
+                                        }}
+                                        disabled={updateDocumentStatusMutation.isPending}
+                                      >
+                                        <Check className="w-3 h-3 mr-1.5" />
+                                        Approve
+                                      </Button>
                                     </div>
                                   )}
                                 </div>
@@ -564,6 +684,120 @@ export function MyStudentsPageContent() {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Action Dialog */}
+      <Dialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {actionType === "approve" && "Approve Document"}
+              {actionType === "reject" && "Reject Document"}
+              {actionType === "resubmit" && "Request Resubmission"}
+            </DialogTitle>
+            <DialogDescription>
+              {actionType === "approve" && `Are you sure you want to approve "${selectedDocument?.name}"?`}
+              {actionType === "reject" && `Please provide a reason for rejecting "${selectedDocument?.name}"`}
+              {actionType === "resubmit" && `Please provide instructions for resubmitting "${selectedDocument?.name}"`}
+            </DialogDescription>
+          </DialogHeader>
+          {actionType === "reject" && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="rejection-reason">Rejection Reason *</Label>
+                <Textarea
+                  id="rejection-reason"
+                  placeholder="Please explain why this document is being rejected..."
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  rows={4}
+                  required
+                />
+              </div>
+            </div>
+          )}
+          {actionType === "resubmit" && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="resubmission-reason">Resubmission Instructions (Optional)</Label>
+                <Textarea
+                  id="resubmission-reason"
+                  placeholder="Provide any specific instructions for resubmission..."
+                  value={resubmissionReason}
+                  onChange={(e) => setResubmissionReason(e.target.value)}
+                  rows={4}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setActionDialogOpen(false)
+                setRejectionReason("")
+                setResubmissionReason("")
+                setSelectedDocument(null)
+                setActionType(null)
+              }}
+              disabled={updateDocumentStatusMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant={actionType === "reject" ? "destructive" : "default"}
+              onClick={async () => {
+                if (!selectedDocument) return
+                
+                if (actionType === "reject" && !rejectionReason.trim()) {
+                  return
+                }
+
+                try {
+                  await updateDocumentStatusMutation.mutateAsync({
+                    documentId: selectedDocument.id,
+                    status: actionType === "approve" ? "approved" : actionType === "reject" ? "rejected" : "pending",
+                    rejectionReason: actionType === "reject" ? rejectionReason : undefined,
+                  })
+                  
+                  setActionDialogOpen(false)
+                  setRejectionReason("")
+                  setResubmissionReason("")
+                  setSelectedDocument(null)
+                  setActionType(null)
+                } catch (error) {
+                  // Error is handled by the mutation
+                }
+              }}
+              disabled={updateDocumentStatusMutation.isPending || (actionType === "reject" && !rejectionReason.trim())}
+            >
+              {updateDocumentStatusMutation.isPending ? (
+                "Processing..."
+              ) : (
+                <>
+                  {actionType === "approve" && (
+                    <>
+                      <Check className="w-4 h-4 mr-2" />
+                      Approve
+                    </>
+                  )}
+                  {actionType === "reject" && (
+                    <>
+                      <X className="w-4 h-4 mr-2" />
+                      Reject
+                    </>
+                  )}
+                  {actionType === "resubmit" && (
+                    <>
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Request Resubmission
+                    </>
+                  )}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

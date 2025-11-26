@@ -13,6 +13,8 @@ export interface StudentDocument {
   uploadedDate?: string
   fileName?: string
   fileSize?: string
+  fileUrl?: string
+  rejectionReason?: string
 }
 
 export interface Student {
