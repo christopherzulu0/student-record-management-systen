@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "migrate:departments": "tsx scripts/migrate-departments.ts",
-    "seed:courses": "tsx scripts/seed-courses.ts"
+    "seed:courses": "tsx scripts/seed-courses.ts",
+    "copy-prisma-engine": "cp ./generated/prisma/libquery_engine-rhel-openssl-3.0.x.so.node ./lib/generated/libquery_engine-rhel-openssl-3.0.x.so.node || true",
+    "vercel-build": "prisma generate && prisma migrate deploy && npm run copy-prisma-engine && next build"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.34.3",
