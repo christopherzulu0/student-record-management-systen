@@ -4,7 +4,11 @@
 generator client {
   provider = "prisma-client"
   output   = "../app/generated/prisma"
-  binaryTargets = ["native", "rhel-openssl-3.0.x", "linux-arm64-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x"]
+   binaryTargets          = ["native", "rhel-openssl-3.0.x", "linux-arm64-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x"]
+  runtime                = "nodejs"
+  moduleFormat           = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension    = "ts"
 }
 
 datasource db {
