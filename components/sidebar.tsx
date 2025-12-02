@@ -15,7 +15,8 @@ import {
   Upload,
   ChevronDown,
   Circle,
-  Sparkles
+  Sparkles,
+  Users2
 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -77,6 +78,7 @@ export function Sidebar() {
         { href: "/admin/students", label: "Students", icon: Users, section: "Management" },
         { href: "/admin/teachers", label: "Teachers", icon: UserCog, section: "Management" },
         { href: "/admin/reports", label: "Reports", icon: BarChart3, section: "Management" },
+        { href: "/admin/users", label: "Users", icon: Users2, section: "Management" },
       ]
     }
 

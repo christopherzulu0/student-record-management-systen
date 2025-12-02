@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Plus,
   Download,
@@ -62,6 +63,7 @@ export function TeacherGradesPageContent() {
   const [itemsPerPage, setItemsPerPage] = useState(10)
   
   // Form state for recording new grade
+  const [dialogCourseId, setDialogCourseId] = useState<string>("")
   const [selectedStudentId, setSelectedStudentId] = useState<string>("")
   const [gradeValue, setGradeValue] = useState<string>("")
   const [attendanceValue, setAttendanceValue] = useState<string>("")
@@ -127,6 +129,80 @@ export function TeacherGradesPageContent() {
 
   const distribution = getGradeDistribution()
 
+  const handleExportCSV = () => {
+    if (!currentCourse || !currentCourseGrades) {
+      toast.error("Please select a course first")
+      return
+    }
+
+    // Prepare CSV data
+    const headers = [
+      "Student ID",
+      "Name",
+      "Grade (%)",
+      "Attendance (%)",
+      "Trend",
+      "Status",
+      "Assignment Type",
+    ]
+
+    const rows = filteredGrades.map((grade) => {
+      let status = ""
+      if (grade.currentGrade >= 90) {
+        status = "Excellent"
+      } else if (grade.currentGrade >= 80) {
+        status = "Good"
+      } else if (grade.currentGrade >= 70) {
+        status = "Average"
+      } else {
+        status = "Needs Help"
+      }
+
+      return [
+        grade.studentId,
+        grade.name,
+        grade.currentGrade.toString(),
+        grade.attendance !== null ? grade.attendance.toString() : "N/A",
+        grade.trend.charAt(0).toUpperCase() + grade.trend.slice(1),
+        status,
+        grade.assignmentType || "N/A",
+      ]
+    })
+
+    // Create CSV content
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")),
+    ].join("\n")
+
+    // Add metadata at the top
+    const metadata = [
+      `Course: ${currentCourse.courseCode} - ${currentCourse.name}`,
+      `Export Date: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
+      `Total Students: ${filteredGrades.length}`,
+      `Average Grade: ${stats.avgGrade}%`,
+      `Average Attendance: ${stats.avgAttendance}%`,
+      "",
+    ]
+
+    const fullCSV = [...metadata, csvContent].join("\n")
+
+    // Create blob and download
+    const blob = new Blob([fullCSV], { type: "text/csv;charset=utf-8;" })
+    const link = document.createElement("a")
+    const url = URL.createObjectURL(blob)
+    
+    link.setAttribute("href", url)
+    link.setAttribute("download", `${currentCourse.courseCode}_grades_${new Date().toISOString().split("T")[0]}.csv`)
+    link.style.visibility = "hidden"
+    
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    toast.success("Report exported successfully!")
+  }
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -138,33 +214,67 @@ export function TeacherGradesPageContent() {
           <p className="text-muted-foreground mt-2">Record, manage, and track student academic performance</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="gap-2"
+            onClick={handleExportCSV}
+            disabled={!currentCourse || !currentCourseGrades || filteredGrades.length === 0}
+          >
             <Download className="w-4 h-4" />
             Export Report
           </Button>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog 
+            open={isDialogOpen} 
+            onOpenChange={(open) => {
+              setIsDialogOpen(open)
+              if (open) {
+                // Initialize dialog course with current selected course
+                setDialogCourseId(selectedCourseId)
+                setSelectedStudentId("")
+                setGradeValue("")
+                setAttendanceValue("")
+                setTrendValue("stable")
+                setAssignmentTypeValue("")
+              } else {
+                // Reset form when dialog closes
+                setSelectedStudentId("")
+                setGradeValue("")
+                setAttendanceValue("")
+                setTrendValue("stable")
+                setAssignmentTypeValue("")
+              }
+            }}
+          >
             <DialogTrigger asChild>
               <Button className="gap-2">
                 <Plus className="w-4 h-4" />
                 Record Grade
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
+            <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col p-0 gap-0">
+              <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0">
                 <DialogTitle className="text-xl">Record Student Grade</DialogTitle>
                 <DialogDescription>Add or update a grade for a student in your course</DialogDescription>
               </DialogHeader>
-              <form
-                className="space-y-5 mt-4"
-                onSubmit={async (e) => {
+              <div className="flex-1 overflow-y-auto px-6 min-h-0">
+                <form
+                  id="record-grade-form"
+                  className="space-y-4 py-4"
+                  onSubmit={async (e) => {
                   e.preventDefault()
                   
-                  if (!selectedStudentId || !gradeValue || !selectedCourseId) {
+                  if (!selectedStudentId || !gradeValue || !dialogCourseId) {
                     toast.error("Please fill in all required fields")
                     return
                   }
 
-                  const selectedStudent = currentCourseGrades?.students.find(
+                  // Get students for the selected course in dialog
+                  const dialogCourseGrades = dialogCourseId && data.gradesByCourse[dialogCourseId]
+                    ? data.gradesByCourse[dialogCourseId]
+                    : null
+
+                  const selectedStudent = dialogCourseGrades?.students.find(
                     s => s.studentModelId === selectedStudentId || s.id === selectedStudentId
                   )
 
@@ -176,7 +286,7 @@ export function TeacherGradesPageContent() {
                   try {
                     await recordGradeMutation.mutateAsync({
                       studentId: selectedStudent.studentModelId || selectedStudent.id.replace('pending-', ''),
-                      courseId: selectedCourseId,
+                      courseId: dialogCourseId,
                       semesterId: selectedStudent.semesterId,
                       score: Number(gradeValue),
                       attendance: attendanceValue && attendanceValue.trim() !== '' 
@@ -199,15 +309,45 @@ export function TeacherGradesPageContent() {
                 }}
               >
                 <div className="space-y-2">
+                  <Label htmlFor="dialog-course" className="text-sm font-medium">
+                    Course <span className="text-red-500">*</span>
+                  </Label>
+                  <Select 
+                    value={dialogCourseId} 
+                    onValueChange={(value) => {
+                      setDialogCourseId(value)
+                      // Reset student selection when course changes
+                      setSelectedStudentId("")
+                    }} 
+                    required
+                  >
+                    <SelectTrigger id="dialog-course">
+                      <SelectValue placeholder="Select course" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {data.courses.map((course) => (
+                        <SelectItem key={course.id} value={course.id}>
+                          {course.displayName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="student" className="text-sm font-medium">
                     Student <span className="text-red-500">*</span>
                   </Label>
-                  <Select value={selectedStudentId} onValueChange={setSelectedStudentId} required>
+                  <Select 
+                    value={selectedStudentId} 
+                    onValueChange={setSelectedStudentId} 
+                    required
+                    disabled={!dialogCourseId}
+                  >
                     <SelectTrigger id="student">
-                      <SelectValue placeholder="Select student" />
+                      <SelectValue placeholder={dialogCourseId ? "Select student" : "Select course first"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {currentCourseGrades?.students.map((g) => (
+                      {dialogCourseId && data.gradesByCourse[dialogCourseId]?.students.map((g) => (
                         <SelectItem key={g.id} value={g.studentModelId || g.id}>
                           {g.name} ({g.studentId})
                         </SelectItem>
@@ -276,32 +416,35 @@ export function TeacherGradesPageContent() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => {
-                      setIsDialogOpen(false)
-                      setSelectedStudentId("")
-                      setGradeValue("")
-                      setAttendanceValue("")
-                      setTrendValue("stable")
-                      setAssignmentTypeValue("")
-                    }}
-                    disabled={recordGradeMutation.isPending}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="flex-1"
-                    disabled={recordGradeMutation.isPending}
-                  >
-                    {recordGradeMutation.isPending ? "Saving..." : "Save Grade"}
-                  </Button>
-                </div>
               </form>
+              </div>
+              <div className="flex gap-2 px-6 pb-6 pt-4 border-t flex-shrink-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    setIsDialogOpen(false)
+                    setDialogCourseId("")
+                    setSelectedStudentId("")
+                    setGradeValue("")
+                    setAttendanceValue("")
+                    setTrendValue("stable")
+                    setAssignmentTypeValue("")
+                  }}
+                  disabled={recordGradeMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  form="record-grade-form"
+                  className="flex-1"
+                  disabled={recordGradeMutation.isPending}
+                >
+                  {recordGradeMutation.isPending ? "Saving..." : "Save Grade"}
+                </Button>
+              </div>
             </DialogContent>
           </Dialog>
         </div>
@@ -702,16 +845,18 @@ export function TeacherGradesPageContent() {
 
       {/* Edit Grade Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0">
             <DialogTitle className="text-xl">Edit Student Grade</DialogTitle>
             <DialogDescription>
               Update grade for {editingGrade?.name} ({editingGrade?.studentId})
             </DialogDescription>
           </DialogHeader>
-          <form
-            className="space-y-5 mt-4"
-            onSubmit={async (e) => {
+          <div className="flex-1 overflow-y-auto px-6 min-h-0">
+            <form
+              id="edit-grade-form"
+              className="space-y-4 py-4"
+              onSubmit={async (e) => {
               e.preventDefault()
               
               if (!editingGrade || !editGradeValue || !selectedCourseId) {
@@ -821,32 +966,34 @@ export function TeacherGradesPageContent() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex gap-2 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                onClick={() => {
-                  setIsEditDialogOpen(false)
-                  setEditingGrade(null)
-                  setEditGradeValue("")
-                  setEditAttendanceValue("")
-                  setEditTrendValue("")
-                  setEditAssignmentType("")
-                }}
-                disabled={recordGradeMutation.isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                className="flex-1"
-                disabled={recordGradeMutation.isPending}
-              >
-                {recordGradeMutation.isPending ? "Updating..." : "Update Grade"}
-              </Button>
-            </div>
           </form>
+          </div>
+          <div className="flex gap-2 px-6 pb-6 pt-4 border-t flex-shrink-0">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                setIsEditDialogOpen(false)
+                setEditingGrade(null)
+                setEditGradeValue("")
+                setEditAttendanceValue("")
+                setEditTrendValue("")
+                setEditAssignmentType("")
+              }}
+              disabled={recordGradeMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form="edit-grade-form"
+              className="flex-1"
+              disabled={recordGradeMutation.isPending}
+            >
+              {recordGradeMutation.isPending ? "Updating..." : "Update Grade"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

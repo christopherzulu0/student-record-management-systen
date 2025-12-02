@@ -6,11 +6,12 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { UserCheck, Loader2 } from "lucide-react"
-import { useTeachers } from "@/lib/hooks/use-teachers"
+
 import { useCourses } from "@/lib/hooks/use-courses"
 import { useSemesters } from "@/lib/hooks/use-semesters"
 import { useUpdateCourse } from "@/lib/hooks/use-courses"
 import { toast } from "sonner"
+import { useTeachers } from "@/lib/hooks/use-teachers-assign"
 
 function AssignTeacherFormContent({ onSuccess }: { onSuccess: () => void }) {
   const [selectedCourse, setSelectedCourse] = useState("")

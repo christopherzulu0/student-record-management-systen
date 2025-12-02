@@ -7,6 +7,7 @@ import {
 import UserSync from "@/components/UserSync";
 import { QueryProvider } from "@/lib/providers/query-provider";
 import { Toaster } from "@/components/ui/sonner";
+import Navbar from "@/components/navbar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -54,6 +55,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased h-full `}
       >
         <QueryProvider>
+        <Navbar/>
           <UserSync/>
           {children}
           <Toaster />

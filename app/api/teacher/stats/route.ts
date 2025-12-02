@@ -288,7 +288,7 @@ export async function GET() {
       { range: 'D (60-69)', count: allGrades.filter(g => g.score >= 60 && g.score < 70).length, fill: '#ef4444' },
     ]
 
-    // Calculate performance trend (last 6 weeks)
+    // Calculate performance trend (last 6 weeks with actual dates)
     const sixWeeksAgo = new Date()
     sixWeeksAgo.setDate(sixWeeksAgo.getDate() - 42)
     
@@ -302,7 +302,15 @@ export async function GET() {
         score: true,
         createdAt: true,
       },
+      orderBy: {
+        createdAt: 'asc',
+      },
     })
+
+    // Get overall average for fallback
+    const overallAvg = allGrades.length > 0
+      ? allGrades.reduce((sum, g) => sum + g.score, 0) / allGrades.length
+      : 0
 
     const performanceTrend = []
     for (let i = 5; i >= 0; i--) {
@@ -319,10 +327,14 @@ export async function GET() {
 
       const avg = weekGrades.length > 0
         ? weekGrades.reduce((sum, g) => sum + g.score, 0) / weekGrades.length
-        : 0
+        : overallAvg // Use overall average if no grades in this week
+
+      // Format week label with date range
+      const weekLabel = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      const weekEndLabel = weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 
       performanceTrend.push({
-        week: `Week ${6 - i}`,
+        week: `${weekLabel}-${weekEndLabel}`,
         avg: Math.round(avg * 10) / 10,
         submissions: weekGrades.length,
       })

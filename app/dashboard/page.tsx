@@ -5,7 +5,7 @@ import dynamic from "next/dynamic"
 import { ProtectedLayout } from "@/components/protected-layout"
 import { DashboardSkeleton } from "@/components/dashboard-skeleton"
 import { ErrorBoundary } from "react-error-boundary"
-import Navbar from "@/components/navbar"
+
 
 // Dynamically import the dashboard content to prevent SSR
 const DashboardContent = dynamic(
@@ -42,7 +42,7 @@ function ErrorFallback({
 export default function DashboardPage() {
   return (
   <>
-    <Navbar/>
+   
     <ProtectedLayout>
       <ErrorBoundary 
         FallbackComponent={ErrorFallback}

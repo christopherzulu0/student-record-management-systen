@@ -151,6 +151,7 @@ model Student {
   documents       Document[]
   recommendations Recommendation[]
   semesters       StudentSemester[]
+  teacherRatings  TeacherRating[]
 
   // Emergency Contact
   emergencyContactName     String? @map("emergency_contact_name")
@@ -177,6 +178,7 @@ model Teacher {
   courses         Course[]
   recommendations Recommendation[]
   grades          Grade[]
+  ratings         TeacherRating[]
 
   @@map("teachers")
 }
@@ -365,4 +367,22 @@ model StudentSemester {
 
   @@unique([studentId, semesterId])
   @@map("student_semesters")
+}
+
+// Teacher Rating Model
+model TeacherRating {
+  id        String   @id @default(cuid())
+  studentId String   @map("student_id")
+  teacherId String   @map("teacher_id")
+  rating    Float    // Rating from 1 to 5
+  comment   String?  // Optional comment
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, teacherId])
+  @@map("teacher_ratings")
 }

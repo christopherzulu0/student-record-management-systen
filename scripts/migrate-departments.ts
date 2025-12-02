@@ -34,37 +34,18 @@ const departments = [
     name: 'Computer Science',
     description: 'Department of Computer Science and Information Technology',
   },
+
   {
-    name: 'Mathematics',
-    description: 'Department of Mathematics and Statistics',
+    name: 'Business Adminsistration',
+    description: 'Department of Business Adminsistration ',
   },
   {
-    name: 'Physics',
-    description: 'Department of Physics and Astronomy',
+    name: 'Accounts',
+    description: 'Department of Accounts',
   },
   {
-    name: 'Chemistry',
-    description: 'Department of Chemistry',
-  },
-  {
-    name: 'Biology',
-    description: 'Department of Biology and Life Sciences',
-  },
-  {
-    name: 'English',
-    description: 'Department of English Language and Literature',
-  },
-  {
-    name: 'History',
-    description: 'Department of History',
-  },
-  {
-    name: 'Economics',
-    description: 'Department of Economics',
-  },
-  {
-    name: 'Business Administration',
-    description: 'Department of Business Administration',
+    name: 'Cyber Security',
+    description: 'Department of Cyber Security',
   },
   {
     name: 'Engineering',

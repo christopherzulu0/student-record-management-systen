@@ -56,42 +56,9 @@ function TeacherDashboardContent() {
           <h1 className="text-3xl md:text-4xl font-bold">Teaching Dashboard</h1>
           <p className="text-slate-300 mt-2">Manage courses, grades, and student progress securely</p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" className="gap-2 bg-white/10 hover:bg-white/20 border-white/20 text-white">
-            <FileText className="h-4 w-4" />
-            Reports
-          </Button>
-          <Button className="gap-2 bg-blue-600 hover:bg-blue-700">
-            <TrendingUp className="h-4 w-4" />
-            Analytics
-          </Button>
-        </div>
+      
       </div>
 
-      {/* Security and Status Alerts */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 text-white border border-green-400/20 flex items-start gap-3">
-          <Shield className="h-5 w-5 flex-shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm">All Records Encrypted</p>
-            <p className="text-xs text-green-100 mt-1">AES-256 • Role-based access</p>
-          </div>
-        </div>
-        <div className="p-4 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white border border-blue-400/20 flex items-start gap-3">
-          <CheckCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm">Automated Backups</p>
-            <p className="text-xs text-blue-100 mt-1">Daily • Last backup today</p>
-          </div>
-        </div>
-        <div className="p-4 rounded-lg bg-gradient-to-br from-purple-500 to-violet-600 text-white border border-purple-400/20 flex items-start gap-3">
-          <Zap className="h-5 w-5 flex-shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm">Real-time Sync</p>
-            <p className="text-xs text-purple-100 mt-1">Live updates • Zero latency</p>
-          </div>
-        </div>
-      </div>
 
       {/* Premium Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -243,17 +210,38 @@ function TeacherDashboardContent() {
                     <Pie
                       data={stats.gradeDistribution}
                       cx="50%"
-                      cy="50%"
-                      innerRadius={50}
-                      outerRadius={80}
+                      cy="45%"
+                      innerRadius={40}
+                      outerRadius={70}
                       paddingAngle={2}
                       dataKey="count"
+                      label={false}
                     >
                       {stats.gradeDistribution.map((entry, idx) => (
                         <Cell key={`cell-${idx}`} fill={entry.fill} />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip 
+                      formatter={(value: number, name: string, props: any) => [
+                        `${value} students`,
+                        props.payload?.name || name
+                      ]}
+                      contentStyle={{ borderRadius: "0.5rem", border: "1px solid hsl(var(--border))" }}
+                    />
+                    <Legend 
+                      formatter={(value, entry: any) => {
+                        const payload = entry.payload
+                        if (payload && payload.name && payload.count !== undefined) {
+                          return `${payload.name}: ${payload.count}`
+                        }
+                        return value
+                      }}
+                      wrapperStyle={{ paddingTop: "0.5rem", fontSize: "0.75rem" }}
+                      iconType="circle"
+                      layout="vertical"
+                      verticalAlign="bottom"
+                      align="center"
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -444,47 +432,7 @@ function TeacherDashboardContent() {
         </TabsContent>
       </Tabs>
 
-      {/* Quick Actions Footer */}
-      <Card className="border-none shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Zap className="h-5 w-5 text-yellow-600" />
-            Quick Actions
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Button
-              variant="outline"
-              className="h-24 flex flex-col items-center justify-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-950 border-blue-200 dark:border-blue-800 bg-transparent"
-            >
-              <Eye className="h-5 w-5 text-blue-600" />
-              <span className="text-xs font-medium text-center">View Grades</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-24 flex flex-col items-center justify-center gap-2 hover:bg-green-50 dark:hover:bg-green-950 border-green-200 dark:border-green-800 bg-transparent"
-            >
-              <MessageSquare className="h-5 w-5 text-green-600" />
-              <span className="text-xs font-medium text-center">Message Class</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-24 flex flex-col items-center justify-center gap-2 hover:bg-purple-50 dark:hover:bg-purple-950 border-purple-200 dark:border-purple-800 bg-transparent"
-            >
-              <FileText className="h-5 w-5 text-purple-600" />
-              <span className="text-xs font-medium text-center">Record Grade</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-24 flex flex-col items-center justify-center gap-2 hover:bg-orange-50 dark:hover:bg-orange-950 border-orange-200 dark:border-orange-800 bg-transparent"
-            >
-              <BarChart3 className="h-5 w-5 text-orange-600" />
-              <span className="text-xs font-medium text-center">Export Report</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+    
     </div>
   )
 }

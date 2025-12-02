@@ -38,121 +38,57 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-
-const gradeData = [
-  { name: "CS101", grade: 92, target: 90, trend: "up" },
-  { name: "MATH201", grade: 89, target: 85, trend: "down" },
-  { name: "ENG102", grade: 87, target: 85, trend: "stable" },
-]
-
-const gpaHistory = [
-  { semester: "Fall 2023", gpa: 3.7, courses: 3 },
-  { semester: "Spring 2024", gpa: 3.75, courses: 4 },
-  { semester: "Fall 2024", gpa: 3.82, courses: 3 },
-]
-
-const creditData = [
-  { name: "Completed", value: 12, fill: "#3b82f6" },
-  { name: "In Progress", value: 9, fill: "#10b981" },
-  { name: "Remaining", value: 39, fill: "#f3f4f6" },
-]
-
-const performanceData = [
-  { name: "Test 1", score: 88, class_avg: 82 },
-  { name: "Test 2", score: 91, class_avg: 84 },
-  { name: "Test 3", score: 92, class_avg: 85 },
-  { name: "Quiz 1", score: 95, class_avg: 88 },
-  { name: "Quiz 2", score: 89, class_avg: 86 },
-]
-
-const upcomingAssignments = [
-  {
-    id: 1,
-    course: "CS101",
-    title: "Data Structures Project",
-    dueDate: "Nov 15",
-    priority: "high",
-    progress: 75,
-    type: "Project",
-  },
-  {
-    id: 2,
-    course: "MATH201",
-    title: "Calculus Problem Set",
-    dueDate: "Nov 18",
-    priority: "medium",
-    progress: 50,
-    type: "Assignment",
-  },
-  {
-    id: 3,
-    course: "ENG102",
-    title: "Essay Assignment",
-    dueDate: "Nov 20",
-    priority: "low",
-    progress: 25,
-    type: "Essay",
-  },
-]
-
-const schedule = [
-  { time: "09:00", course: "CS101", room: "A201", instructor: "Dr. Jane Smith", duration: "1.5h" },
-  { time: "11:00", course: "MATH201", room: "B105", instructor: "Dr. John Wilson", duration: "1.5h" },
-  { time: "14:00", course: "ENG102", room: "C301", instructor: "Prof. Emily Brown", duration: "1h" },
-]
-
-const academicAlerts = [
-  { id: 1, type: "success", message: "Excellent performance in CS101! Keep it up.", icon: CheckCircle },
-  { id: 2, type: "warning", message: "MATH201 grade trending down, consider tutoring.", icon: AlertCircle },
-  { id: 3, type: "info", message: "You qualify for Dean's List this semester!", icon: Award },
-]
+import { useStudentDashboard } from "@/lib/hooks/use-student-dashboard"
 
 export function StudentDashboard() {
+  const { data } = useStudentDashboard()
   const [activeTab, setActiveTab] = useState("overview")
+
+  // Use data from API
+  const gradeData = data.courseGrades
+  const gpaHistory = data.gpaHistory
+  const creditData = data.creditData
+  const performanceData = data.performanceData
+  const academicAlerts = data.academicAlerts
+  const upcomingAssignments = data.upcomingAssignments
+  const schedule = data.schedule
+
+  // Calculate GPA change
+  const gpaChange = gpaHistory.length >= 2
+    ? Number((data.currentGPA - gpaHistory[gpaHistory.length - 2].gpa).toFixed(2))
+    : 0
+
+  // Calculate credits percentage
+  const creditsPercentage = data.totalCreditsRequired > 0
+    ? Math.round((data.creditsEarned / data.totalCreditsRequired) * 100)
+    : 0
+
+  // Calculate course average change (placeholder)
+  const courseAvgChange = 2.4
+
+  // Calculate class rank percentage
+  const rankPercentage = data.totalStudents > 0
+    ? Math.round((data.classRank / data.totalStudents) * 100)
+    : 0
 
   return (
     <div className="w-full space-y-8 pb-6">
       {/* Enhanced Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 to-slate-800 dark:from-slate-950 dark:to-slate-900 p-6 rounded-xl text-white">
         <div className="flex-1">
-          <h1 className="text-3xl md:text-4xl font-bold">Welcome back, Alex Chen</h1>
+          <h1 className="text-3xl md:text-4xl font-bold">Welcome back, {data.name}</h1>
           <p className="text-slate-300 mt-2">Your academic journey is secure and tracked in real-time</p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" className="gap-2 bg-white/10 hover:bg-white/20 border-white/20 text-white">
-            <Download className="h-4 w-4" />
-            Export
-          </Button>
-          <Button className="gap-2 bg-blue-600 hover:bg-blue-700">
-            <FileText className="h-4 w-4" />
-            Transcript
-          </Button>
-        </div>
+     
       </div>
 
-      {/* Security Status and Alerts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="p-4 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 text-white border border-green-400/20 flex items-start gap-3">
-          <Shield className="h-5 w-5 flex-shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm">Records Encrypted</p>
-            <p className="text-xs text-green-100 mt-1">AES-256 encryption • Daily backups • Real-time sync</p>
-          </div>
-        </div>
-        <div className="p-4 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 text-white border border-purple-400/20 flex items-start gap-3">
-          <Zap className="h-5 w-5 flex-shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm">On Track</p>
-            <p className="text-xs text-purple-100 mt-1">Maintaining 3.82 GPA • 20% ahead of schedule</p>
-          </div>
-        </div>
-      </div>
+   
 
       {/* Academic Alerts */}
-      {academicAlerts.length > 0 && (
+      {/* {academicAlerts.length > 0 && (
         <div className="space-y-2">
-          {academicAlerts.map((alert) => {
-            const Icon = alert.icon
+            {academicAlerts.map((alert) => {
+            const Icon = alert.type === "success" ? CheckCircle : alert.type === "warning" ? AlertCircle : Award
             const bgColor =
               alert.type === "success"
                 ? "bg-green-50 dark:bg-green-950"
@@ -183,7 +119,7 @@ export function StudentDashboard() {
             )
           })}
         </div>
-      )}
+      )} */}
 
       {/* Premium Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -192,9 +128,9 @@ export function StudentDashboard() {
             <CardTitle className="text-sm font-medium opacity-90">Current GPA</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">3.82</div>
+            <div className="text-3xl font-bold">{data.currentGPA.toFixed(2)}</div>
             <p className="text-xs text-blue-100 mt-2 flex items-center gap-1">
-              <TrendingUp className="h-3 w-3" /> +0.07 this semester
+              <TrendingUp className="h-3 w-3" /> {gpaChange >= 0 ? '+' : ''}{gpaChange.toFixed(2)} this semester
             </p>
           </CardContent>
         </Card>
@@ -204,8 +140,8 @@ export function StudentDashboard() {
             <CardTitle className="text-sm font-medium opacity-90">Credits Earned</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">12/60</div>
-            <p className="text-xs text-green-100 mt-2">20% complete</p>
+            <div className="text-3xl font-bold">{data.creditsEarned}/{data.totalCreditsRequired}</div>
+            <p className="text-xs text-green-100 mt-2">{creditsPercentage}% complete</p>
           </CardContent>
         </Card>
 
@@ -214,8 +150,8 @@ export function StudentDashboard() {
             <CardTitle className="text-sm font-medium opacity-90">Course Avg</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">89.3</div>
-            <p className="text-xs text-purple-100 mt-2">+2.4 from last term</p>
+            <div className="text-3xl font-bold">{data.courseAverage.toFixed(1)}</div>
+            <p className="text-xs text-purple-100 mt-2">+{courseAvgChange.toFixed(1)} from last term</p>
           </CardContent>
         </Card>
 
@@ -224,8 +160,8 @@ export function StudentDashboard() {
             <CardTitle className="text-sm font-medium opacity-90">Class Rank</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">8/120</div>
-            <p className="text-xs text-orange-100 mt-2">Top 7%</p>
+            <div className="text-3xl font-bold">{data.classRank}/{data.totalStudents}</div>
+            <p className="text-xs text-orange-100 mt-2">Top {rankPercentage}%</p>
           </CardContent>
         </Card>
 
@@ -234,7 +170,7 @@ export function StudentDashboard() {
             <CardTitle className="text-sm font-medium opacity-90">Completion</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">92%</div>
+            <div className="text-3xl font-bold">{data.completionPercentage}%</div>
             <p className="text-xs text-pink-100 mt-2">All assignments on time</p>
           </CardContent>
         </Card>
@@ -246,12 +182,12 @@ export function StudentDashboard() {
           <TabsTrigger value="overview" className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">
             Academic Overview
           </TabsTrigger>
-          <TabsTrigger
+          {/* <TabsTrigger
             value="assignments"
             className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700"
           >
             Assignments
-          </TabsTrigger>
+          </TabsTrigger> */}
           <TabsTrigger
             value="performance"
             className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700"
@@ -295,7 +231,7 @@ export function StudentDashboard() {
             </Card>
 
             {/* Credit Progress */}
-            <Card className="border-none shadow-lg">
+            {/* <Card className="border-none shadow-lg">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Target className="h-5 w-5 text-purple-600" />
@@ -314,7 +250,7 @@ export function StudentDashboard() {
                   </PieChart>
                 </ResponsiveContainer>
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
 
           {/* GPA Trend and Schedule */}
@@ -345,7 +281,7 @@ export function StudentDashboard() {
               </CardContent>
             </Card>
 
-            <Card className="border-none shadow-lg overflow-hidden">
+            {/* <Card className="border-none shadow-lg overflow-hidden">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Calendar className="h-5 w-5 text-green-600" />
@@ -354,7 +290,7 @@ export function StudentDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {schedule.map((item, idx) => (
+                  {schedule.length > 0 ? schedule.map((item, idx) => (
                     <div
                       key={idx}
                       className="p-3 rounded-lg bg-gradient-to-r from-blue-50 to-transparent dark:from-blue-950 dark:to-transparent border border-blue-100 dark:border-blue-900"
@@ -372,18 +308,20 @@ export function StudentDashboard() {
                         </Badge>
                       </div>
                     </div>
-                  ))}
+                  )) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">No schedule available</p>
+                  )}
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
         </TabsContent>
 
         {/* Assignments Tab */}
-        <TabsContent value="assignments" className="space-y-6 mt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* <TabsContent value="assignments" className="space-y-6 mt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6"> */}
             {/* Pending Assignments */}
-            <Card className="lg:col-span-2 border-none shadow-lg">
+            {/* <Card className="lg:col-span-2 border-none shadow-lg">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Clock className="h-5 w-5 text-orange-600" />
@@ -392,7 +330,7 @@ export function StudentDashboard() {
                 <CardDescription>3 tasks due in next 7 days</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                {upcomingAssignments.map((assignment) => (
+                {upcomingAssignments.length > 0 ? upcomingAssignments.map((assignment) => (
                   <div
                     key={assignment.id}
                     className="p-4 border rounded-lg hover:bg-accent transition-colors cursor-pointer"
@@ -432,12 +370,14 @@ export function StudentDashboard() {
                       </span>
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">No upcoming assignments</p>
+                )}
               </CardContent>
-            </Card>
+            </Card> */}
 
             {/* Assignment Stats */}
-            <Card className="border-none shadow-lg bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+            {/* <Card className="border-none shadow-lg bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
                   <Flame className="h-5 w-5 text-red-600" />
@@ -458,9 +398,9 @@ export function StudentDashboard() {
                   <p className="text-xs text-muted-foreground mt-1">Average score</p>
                 </div>
               </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
+            </Card> */}
+          {/* </div>
+        </TabsContent> */}
 
         {/* Performance Tab */}
         <TabsContent value="performance" className="space-y-6 mt-6">
@@ -522,11 +462,7 @@ export function StudentDashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {[
-              { name: "Fall 2024 Transcript", size: "2.4 MB", date: "Nov 1, 2024", encrypted: true },
-              { name: "Academic Progress Sheet", size: "1.8 MB", date: "Nov 5, 2024", encrypted: true },
-              { name: "Degree Audit", size: "956 KB", date: "Oct 20, 2024", encrypted: true },
-            ].map((doc, idx) => (
+            {data.documents.length > 0 ? data.documents.map((doc, idx) => (
               <div
                 key={idx}
                 className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent transition-colors"
@@ -544,7 +480,9 @@ export function StudentDashboard() {
                   🔒 Encrypted
                 </Badge>
               </div>
-            ))}
+            )) : (
+              <p className="text-sm text-muted-foreground text-center py-4">No documents available</p>
+            )}
           </div>
         </CardContent>
       </Card>
