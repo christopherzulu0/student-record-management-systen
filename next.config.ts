@@ -12,6 +12,11 @@ const nextConfig: NextConfig = {
     //   appDir: true,
     // },
   },
+  // Include Prisma client files in output file tracing for deployment
+  outputFileTracingIncludes: {
+    '/api/**/*': ['./app/generated/prisma/**/*'],
+    '/*': ['./app/generated/prisma/**/*'],
+  },
   
 };
 
