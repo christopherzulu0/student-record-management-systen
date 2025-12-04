@@ -10,7 +10,7 @@
     "lint": "eslint",
     "migrate:departments": "tsx scripts/migrate-departments.ts",
     "seed:courses": "tsx scripts/seed-courses.ts",
-    "copy-prisma-engine": "cp ./app/generated/prisma/libquery_engine-rhel-openssl-3.0.x.so.node ./app/generated/libquery_engine-rhel-openssl-3.0.x.so.node || true",
+   "copy-prisma-engine": "mkdir -p ./app/generated && cp ./app/generated/prisma/libquery_engine-rhel-openssl-3.0.x.so.node ./app/generated/libquery_engine-rhel-openssl-3.0.x.so.node || true",
     "vercel-build": "prisma generate && prisma migrate deploy && npm run copy-prisma-engine && next build"
   },
   "exports": {
