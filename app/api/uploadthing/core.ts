@@ -1,6 +1,6 @@
 import { createUploadthing, type FileRouter } from "uploadthing/next";
 import { auth, currentUser } from "@clerk/nextjs/server";
-import prisma from "@/lib/prisma";
+import {prisma} from "@/lib/prisma";
 
 const f = createUploadthing();
 
@@ -129,8 +129,8 @@ export const ourFileRouter = {
             return { uploadedBy: metadata.userId };
         }),
     studentDocument: f({ 
-        pdf: { maxFileSize: "10MB", maxFileCount: 1 }, 
-        image: { maxFileSize: "10MB", maxFileCount: 1 } 
+        pdf: { maxFileSize: "16MB", maxFileCount: 1 }, 
+        image: { maxFileSize: "16MB", maxFileCount: 1 } 
     })
         .middleware(async () => {
             console.log("[UploadThing] Student document middleware called - starting auth");
