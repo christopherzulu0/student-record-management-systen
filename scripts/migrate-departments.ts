@@ -2,7 +2,7 @@
 import { config } from 'dotenv'
 import { resolve } from 'path'
 import { existsSync } from 'fs'
-import { PrismaClient } from '../app/generated/prisma/client'
+import { PrismaClient } from '../lib/generated/prisma/client'
 
 // Try to load .env.local first (Next.js convention), then .env as fallback
 const envLocalPath = resolve(process.cwd(), '.env.local')
