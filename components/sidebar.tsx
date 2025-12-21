@@ -16,7 +16,8 @@ import {
   ChevronDown,
   Circle,
   Sparkles,
-  Users2
+  Users2,
+  User
 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -88,6 +89,7 @@ export function Sidebar() {
         { href: "/teacher/grades", label: "Grades", icon: BarChart3, section: "Academic" },
         { href: "/teacher/students", label: "My Students", icon: Users, section: "Academic" },
         { href: "/teacher/recommendations", label: "Recommendations", icon: Mail, section: "Academic" },
+        { href: "/teacher/parents", label: "Guardians", icon: User, section: "Academic" },
       ]
     }
 

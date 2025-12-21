@@ -7,7 +7,7 @@ export interface AdminUser {
   userId: string
   name: string
   email: string
-  role: "student" | "teacher" | "admin"
+  role: "student" | "teacher" | "admin" | "parent"
   status: string
   createdAt: string
 }

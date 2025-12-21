@@ -10,7 +10,7 @@ import { User } from "lucide-react"
 export default function LoginPage() {
   const router = useRouter()
 
-  const handleSelectUser = (role: "student" | "teacher" | "admin") => {
+  const handleSelectUser = (role: "student" | "teacher" | "admin" | "parent") => {
     let email: string
     
     if (role === "admin") {

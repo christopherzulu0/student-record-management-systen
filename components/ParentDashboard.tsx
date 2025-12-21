@@ -1,0 +1,542 @@
+"use client"
+
+import { useState } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  GraduationCap,
+  BookOpen,
+  TrendingUp,
+  TrendingDown,
+  FileText,
+  Calendar,
+  AlertCircle,
+  CheckCircle,
+  Award,
+  BarChart3,
+  Target,
+  Clock,
+} from "lucide-react"
+import { cn } from "@/lib/utils"
+import { useParentDashboard, type Child } from "@/lib/hooks/use-parent-dashboard"
+
+function ParentDashboardContent() {
+  const { data } = useParentDashboard()
+  const [selectedStudent, setSelectedStudent] = useState<Child | null>(
+    data.children.length > 0 ? data.children[0] : null
+  )
+
+  if (!selectedStudent) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-6 lg:px-6 lg:py-8 max-w-7xl">
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground">No children linked to your account.</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
+  const gradesWithAttendance = selectedStudent.grades.filter((g) => g.attendance !== null)
+  const avgAttendance =
+    gradesWithAttendance.length > 0
+      ? gradesWithAttendance.reduce((sum, g) => sum + (g.attendance || 0), 0) / gradesWithAttendance.length
+      : 0
+  const progressPercentage =
+    (selectedStudent.totalCreditsEarned / selectedStudent.totalCreditsRequired) * 100
+  const hasAlerts = selectedStudent.documents.some(
+    (d) => d.status === "expired" || d.status === "pending"
+  )
+  const totalAssignments = selectedStudent.grades.reduce((sum, g) => sum + g.assignments, 0)
+  const completedAssignments = selectedStudent.grades.reduce((sum, g) => sum + g.completed, 0)
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-6 lg:px-6 lg:py-8 max-w-7xl">
+        <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-sm font-medium text-muted-foreground mb-1">Parent Portal</p>
+            <h1 className="text-3xl font-bold tracking-tight lg:text-4xl text-balance">
+              Welcome back, {data.parent.firstName}
+            </h1>
+          </div>
+
+          <div className="flex gap-2">
+            {data.children.map((student) => {
+              const isSelected = selectedStudent.id === student.id
+              return (
+                <button
+                  key={student.id}
+                  onClick={() => setSelectedStudent(student)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg border px-4 py-3 transition-all",
+                    isSelected
+                      ? "border-primary bg-primary/5 shadow-sm"
+                      : "border-border/50 bg-card hover:border-primary/30 hover:bg-card/80",
+                  )}
+                >
+                  <Avatar className="h-9 w-9 border border-border">
+                    <AvatarImage src={`/.jpg?height=36&width=36&query=${student.firstName}`} />
+                    <AvatarFallback className="text-xs font-semibold">
+                      {student.firstName[0]}
+                      {student.lastName[0]}
+                    </AvatarFallback>
+                  </Avatar>
+
+                  <div className="text-left">
+                    <p className="text-sm font-semibold leading-none">{student.firstName}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {student.yearOfStudy ? `Year ${student.yearOfStudy}` : "Student"}
+                    </p>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {/* GPA Card */}
+          <Card className="border-border/50 transition-all hover:border-primary/30 hover:shadow-md">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Cumulative GPA
+                </CardTitle>
+                <div className="rounded-md bg-primary/10 p-1.5">
+                  <GraduationCap className="h-4 w-4 text-primary" />
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-2">
+              <div className="flex items-baseline gap-1">
+                <span className="text-3xl font-bold tracking-tight">
+                  {selectedStudent.cumulativeGPA.toFixed(2)}
+                </span>
+                <span className="text-base font-medium text-muted-foreground">/ 4.0</span>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <Badge variant="outline" className="border-accent/30 bg-accent/10 text-xs text-accent px-2 py-0">
+                  <TrendingUp className="mr-1 h-3 w-3" />
+                  {selectedStudent.semesterGPA.toFixed(2)}
+                </Badge>
+                <span className="text-xs text-muted-foreground">this semester</span>
+              </div>
+
+              {selectedStudent.gpaHistory.length > 0 && (
+                <div className="h-12 w-full">
+                  <MiniChart data={selectedStudent.gpaHistory} />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Credits Progress Card */}
+          <Card className="border-border/50 transition-all hover:border-chart-2/30 hover:shadow-md">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Credits Progress
+                </CardTitle>
+                <div className="rounded-md bg-chart-2/10 p-1.5">
+                  <Target className="h-4 w-4 text-chart-2" />
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-3">
+              <div className="flex items-baseline gap-1">
+                <span className="text-3xl font-bold tracking-tight">
+                  {selectedStudent.totalCreditsEarned}
+                </span>
+                <span className="text-base font-medium text-muted-foreground">
+                  / {selectedStudent.totalCreditsRequired}
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                <div className="relative h-2 overflow-hidden rounded-full bg-secondary">
+                  <div
+                    className="h-full bg-chart-2 transition-all duration-500"
+                    style={{ width: `${progressPercentage}%` }}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-medium text-foreground">
+                    {Math.round(progressPercentage)}% complete
+                  </span>
+                  <span className="text-muted-foreground">
+                    {selectedStudent.totalCreditsRequired - selectedStudent.totalCreditsEarned} left
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Attendance Card */}
+          <Card className="border-border/50 transition-all hover:border-chart-3/30 hover:shadow-md">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Attendance
+                </CardTitle>
+                <div className="rounded-md bg-chart-3/10 p-1.5">
+                  <BarChart3 className="h-4 w-4 text-chart-3" />
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-3">
+              <div className="flex items-baseline gap-1">
+                <span className="text-3xl font-bold tracking-tight">
+                  {Math.round(avgAttendance)}%
+                </span>
+                <span className="text-base font-medium text-muted-foreground">average</span>
+              </div>
+
+              <div className="space-y-2">
+                <div className="relative h-2 overflow-hidden rounded-full bg-secondary">
+                  <div
+                    className="h-full bg-chart-3 transition-all duration-500"
+                    style={{ width: `${avgAttendance}%` }}
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <BookOpen className="h-3 w-3" />
+                    {selectedStudent.enrollments.length} courses
+                  </div>
+                  <span>•</span>
+                  <div>
+                    {completedAssignments}/{totalAssignments} assignments
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Documents Card */}
+          <Card className="border-border/50 transition-all hover:border-chart-4/30 hover:shadow-md">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Documents
+                </CardTitle>
+                <div className="rounded-md bg-chart-4/10 p-1.5">
+                  <FileText className="h-4 w-4 text-chart-4" />
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-3">
+              <div className="flex items-baseline gap-1">
+                <span className="text-3xl font-bold tracking-tight">
+                  {selectedStudent.documents.filter((d) => d.status === "approved").length}
+                </span>
+                <span className="text-base font-medium text-muted-foreground">
+                  / {selectedStudent.documents.length}
+                </span>
+              </div>
+
+              {hasAlerts ? (
+                <Badge
+                  variant="outline"
+                  className="w-full justify-center border-destructive/30 bg-destructive/10 text-xs text-destructive py-1"
+                >
+                  <AlertCircle className="mr-1.5 h-3 w-3" />
+                  Action required
+                </Badge>
+              ) : (
+                <Badge
+                  variant="outline"
+                  className="w-full justify-center border-accent/30 bg-accent/10 text-xs text-accent py-1"
+                >
+                  <CheckCircle className="mr-1.5 h-3 w-3" />
+                  All approved
+                </Badge>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <Tabs defaultValue="grades" className="w-full">
+          <TabsList className="w-full justify-start border-b border-border bg-transparent p-0 h-auto rounded-none">
+            <TabsTrigger
+              value="grades"
+              className="rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            >
+              <Award className="mr-2 h-4 w-4" />
+              Grades
+            </TabsTrigger>
+            <TabsTrigger
+              value="courses"
+              className="rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            >
+              <BookOpen className="mr-2 h-4 w-4" />
+              Courses
+            </TabsTrigger>
+            <TabsTrigger
+              value="documents"
+              className="rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              Documents
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="grades" className="mt-6 space-y-3">
+            {selectedStudent.grades.length > 0 ? (
+              selectedStudent.grades.map((grade) => (
+                <Card key={grade.courseCode} className="border-border/50 hover:border-primary/20 transition-colors">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold text-base leading-tight">{grade.courseName}</h3>
+                              {getTrendIcon(grade.trend)}
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-0.5">{grade.courseCode}</p>
+                          </div>
+
+                          <div className="text-right">
+                            <div className="text-2xl font-bold">{grade.score}%</div>
+                            <Badge variant="outline" className="mt-1 text-xs">
+                              {getLetterGradeDisplay(grade.letterGrade)}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-3 pt-2 border-t border-border/50">
+                          {grade.attendance !== null && (
+                            <div>
+                              <p className="text-xs text-muted-foreground">Attendance</p>
+                              <p className="text-sm font-semibold mt-0.5">{grade.attendance}%</p>
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-xs text-muted-foreground">Assignments</p>
+                            <p className="text-sm font-semibold mt-0.5">
+                              {grade.completed}/{grade.assignments}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Completion</p>
+                            <p className="text-sm font-semibold mt-0.5">
+                              {grade.assignments > 0
+                                ? Math.round((grade.completed / grade.assignments) * 100)
+                                : 0}%
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  <p>No grades available. You may not have permission to view grades.</p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="courses" className="mt-6 space-y-3">
+            {selectedStudent.enrollments.length > 0 ? (
+              selectedStudent.enrollments.map((enrollment) => {
+                const gradeInfo = selectedStudent.grades.find(
+                  (g) => g.courseCode === enrollment.courseCode
+                )
+
+                return (
+                  <Card
+                    key={enrollment.courseCode}
+                    className="border-border/50 hover:border-primary/20 transition-colors"
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold text-base">{enrollment.courseName}</h3>
+                            <Badge variant="secondary" className="text-xs">
+                              {enrollment.credits} credits
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{enrollment.courseCode}</p>
+
+                          {gradeInfo && (
+                            <div className="mt-3 flex items-center gap-4 text-sm">
+                              <div className="flex items-center gap-1.5">
+                                <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                                <span className="text-muted-foreground">Current:</span>
+                                <span className="font-semibold">{gradeInfo.score}%</span>
+                              </div>
+                              {gradeInfo.attendance !== null && (
+                                <div className="flex items-center gap-1.5">
+                                  <div className="h-1.5 w-1.5 rounded-full bg-chart-3" />
+                                  <span className="text-muted-foreground">Attendance:</span>
+                                  <span className="font-semibold">{gradeInfo.attendance}%</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "capitalize",
+                            enrollment.status === "enrolled" &&
+                              "border-accent/30 bg-accent/10 text-accent",
+                          )}
+                        >
+                          {enrollment.status}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })
+            ) : (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  <p>No courses enrolled.</p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="documents" className="mt-6 space-y-3">
+            {selectedStudent.documents.length > 0 ? (
+              selectedStudent.documents.map((doc, index) => (
+                <Card key={index} className="border-border/50 hover:border-primary/20 transition-colors">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3 flex-1">
+                        <div className="rounded-md bg-muted p-2 mt-0.5">
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                        </div>
+
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold text-base">{doc.name}</h3>
+                            {doc.required && (
+                              <Badge variant="outline" className="text-xs">
+                                Required
+                              </Badge>
+                            )}
+                          </div>
+
+                          {doc.expiryDate && (
+                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1">
+                              <Calendar className="h-3.5 w-3.5" />
+                              <span>Expires: {new Date(doc.expiryDate).toLocaleDateString()}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <Badge variant="outline" className={cn("capitalize text-xs", getStatusColor(doc.status))}>
+                        {doc.status === "approved" && <CheckCircle className="mr-1 h-3 w-3" />}
+                        {doc.status === "pending" && <Clock className="mr-1 h-3 w-3" />}
+                        {(doc.status === "expired" || doc.status === "rejected") && (
+                          <AlertCircle className="mr-1 h-3 w-3" />
+                        )}
+                        {doc.status}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  <p>No documents available. You may not have permission to view documents.</p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  )
+}
+
+
+function getLetterGradeDisplay(grade: string) {
+  return grade.replace(/_/g, "")
+}
+
+function getStatusColor(status: string) {
+  switch (status) {
+    case "approved":
+      return "bg-accent/10 text-accent border-accent/20"
+    case "pending":
+      return "bg-chart-3/10 text-chart-3 border-chart-3/20"
+    case "expired":
+    case "rejected":
+      return "bg-destructive/10 text-destructive border-destructive/20"
+    default:
+      return "bg-muted text-muted-foreground"
+  }
+}
+
+function getTrendIcon(trend: string) {
+  switch (trend) {
+    case "up":
+      return <TrendingUp className="h-4 w-4 text-accent" />
+    case "down":
+      return <TrendingDown className="h-4 w-4 text-destructive" />
+    default:
+      return null
+  }
+}
+
+function MiniChart({ data }: { data: { semester: string; gpa: number }[] }) {
+  const max = 4.0
+  const points = data.map((d, i) => {
+    const x = (i / (data.length - 1)) * 100
+    const y = 100 - (d.gpa / max) * 100
+    return `${x},${y}`
+  })
+
+  return (
+    <svg viewBox="0 0 100 40" className="h-20 w-full" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="chartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="rgb(var(--color-primary) / 0.3)" />
+          <stop offset="100%" stopColor="rgb(var(--color-primary) / 0.05)" />
+        </linearGradient>
+      </defs>
+      <polyline
+        fill="none"
+        stroke="rgb(var(--color-primary))"
+        strokeWidth="2"
+        points={points.join(" ")}
+        vectorEffect="non-scaling-stroke"
+      />
+      <polyline fill="url(#chartGradient)" points={`0,100 ${points.join(" ")} 100,100`} />
+      {data.map((d, i) => {
+        const x = (i / (data.length - 1)) * 100
+        const y = 100 - (d.gpa / max) * 100
+        return <circle key={i} cx={x} cy={y} r="2" fill="rgb(var(--color-primary))" vectorEffect="non-scaling-stroke" />
+      })}
+    </svg>
+  )
+}
+
+export default function ParentDashboard() {
+  return <ParentDashboardContent />
+}

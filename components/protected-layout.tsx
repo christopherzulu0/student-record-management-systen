@@ -6,7 +6,7 @@ import { Sidebar } from "./sidebar"
 
 interface ProtectedLayoutProps {
   children: React.ReactNode
-  allowedRoles?: Array<"student" | "teacher" | "admin">
+  allowedRoles?: Array<"student" | "teacher" | "admin" | "parent">
 }
 
 export function ProtectedLayout({ children, allowedRoles }: ProtectedLayoutProps) {

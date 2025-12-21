@@ -26,6 +26,7 @@ enum Role {
   student
   teacher
   admin
+  parent
 }
 
 enum StudentStatus {
@@ -38,6 +39,11 @@ enum StudentStatus {
 enum TeacherStatus {
   active
   on_leave
+  inactive
+}
+
+enum ParentStatus {
+  active
   inactive
 }
 
@@ -126,6 +132,7 @@ model User {
   student Student?
   teacher Teacher?
   admin   Admin?
+  parent  Parent?
 
   @@map("users")
 }
@@ -155,6 +162,7 @@ model Student {
   recommendations Recommendation[]
   semesters       StudentSemester[]
   teacherRatings  TeacherRating[]
+  parentStudents  ParentStudent[]
 
   // Emergency Contact
   emergencyContactName     String? @map("emergency_contact_name")
@@ -198,6 +206,44 @@ model Admin {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("admins")
+}
+
+// Parent Model
+model Parent {
+  id         String       @id @default(cuid())
+  userId     String       @unique @map("user_id")
+  parentId   String?      @unique @map("parent_id")
+  relationship String?    // e.g., "Father", "Mother", "Guardian"
+  status     ParentStatus @default(active)
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentStudents ParentStudent[]
+
+  @@map("parents")
+}
+
+// Parent-Student Relationship Model (Many-to-Many)
+model ParentStudent {
+  id            String   @id @default(cuid())
+  parentId      String   @map("parent_id")
+  studentId     String   @map("student_id")
+  relationship  String?  // e.g., "Father", "Mother", "Guardian", "Step-Parent"
+  isPrimary     Boolean  @default(false) @map("is_primary") // Primary contact parent
+  canViewGrades Boolean  @default(true) @map("can_view_grades")
+  canViewAttendance Boolean @default(true) @map("can_view_attendance")
+  canViewDocuments Boolean @default(true) @map("can_view_documents")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  parent  Parent  @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, studentId])
+  @@map("parent_students")
 }
 
 // Department Model

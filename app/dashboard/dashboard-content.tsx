@@ -6,6 +6,8 @@ import { StudentDashboardSkeleton } from "@/components/dashboards/StudentDashboa
 import { TeacherDashboard } from "@/components/dashboards/teacher-dashboard"
 import { AdminDashboard } from "@/components/dashboards/admin-dashboard"
 import { useUser } from "@/lib/hooks/use-user"
+import ParentDashboard from "@/components/ParentDashboard"
+import { ParentDashboardSkeleton } from "@/components/ParentDashboardSkeleton"
 
 export function DashboardContent() {
   const { data: user } = useUser()
@@ -19,6 +21,11 @@ export function DashboardContent() {
       )}
       {user.role === "teacher" && <TeacherDashboard />}
       {user.role === "admin" && <AdminDashboard />}
+      {user.role === "parent" && (
+        <Suspense fallback={<ParentDashboardSkeleton />}>
+          <ParentDashboard />
+        </Suspense>
+      )}
     </div>
   )
 }
