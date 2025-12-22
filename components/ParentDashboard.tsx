@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -21,12 +22,33 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useParentDashboard, type Child } from "@/lib/hooks/use-parent-dashboard"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
+import { Download } from "lucide-react"
+import { generateGradesPDF } from "@/lib/utils/pdf-generator"
 
 function ParentDashboardContent() {
   const { data } = useParentDashboard()
   const [selectedStudent, setSelectedStudent] = useState<Child | null>(
     data.children.length > 0 ? data.children[0] : null
   )
+  const [selectedSemesterId, setSelectedSemesterId] = useState<string>("all")
+  const [selectedYear, setSelectedYear] = useState<string>("all")
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+  
+  // Get all available semesters from API (including inactive ones)
+  const allSemesters = data.semesters || []
+  
+  // Extract unique years from semesters
+  const years = Array.from(
+    new Set(
+      allSemesters.map((s) => {
+        const startDate = new Date(s.startDate)
+        return startDate.getFullYear().toString()
+      })
+    )
+  ).sort((a, b) => Number(b) - Number(a)) // Sort descending (newest first)
 
   if (!selectedStudent) {
     return (
@@ -42,7 +64,44 @@ function ParentDashboardContent() {
     )
   }
 
-  const gradesWithAttendance = selectedStudent.grades.filter((g) => g.attendance !== null)
+  // Filter semesters by selected year, then sort
+  const filteredSemestersByYear = allSemesters.filter((s) => {
+    if (selectedYear === "all") return true
+    const startDate = new Date(s.startDate)
+    return startDate.getFullYear().toString() === selectedYear
+  })
+
+  // Use filtered semesters, sorted by active status and date
+  const semesters = filteredSemestersByYear
+    .sort((a, b) => {
+      // Sort by active status first (active semesters first), then by start date (newest first)
+      if (a.isActive !== b.isActive) {
+        return b.isActive ? 1 : -1
+      }
+      const dateA = new Date(a.startDate).getTime()
+      const dateB = new Date(b.startDate).getTime()
+      return dateB - dateA
+    })
+    .map((s) => ({
+      id: s.id,
+      name: s.name,
+      startDate: s.startDate,
+      endDate: s.endDate,
+    }))
+
+  // Filter enrollments and grades by selected semester
+  const filteredEnrollments =
+    selectedSemesterId === "all"
+      ? selectedStudent.enrollments
+      : selectedStudent.enrollments.filter((e) => e.semesterId === selectedSemesterId)
+
+  const filteredGrades =
+    selectedSemesterId === "all"
+      ? selectedStudent.grades
+      : selectedStudent.grades.filter((g) => g.semesterId === selectedSemesterId)
+
+  // Calculate statistics based on filtered data
+  const gradesWithAttendance = filteredGrades.filter((g) => g.attendance !== null)
   const avgAttendance =
     gradesWithAttendance.length > 0
       ? gradesWithAttendance.reduce((sum, g) => sum + (g.attendance || 0), 0) / gradesWithAttendance.length
@@ -52,8 +111,13 @@ function ParentDashboardContent() {
   const hasAlerts = selectedStudent.documents.some(
     (d) => d.status === "expired" || d.status === "pending"
   )
-  const totalAssignments = selectedStudent.grades.reduce((sum, g) => sum + g.assignments, 0)
-  const completedAssignments = selectedStudent.grades.reduce((sum, g) => sum + g.completed, 0)
+  const totalAssignments = filteredGrades.reduce((sum, g) => sum + g.assignments, 0)
+  const completedAssignments = filteredGrades.reduce((sum, g) => sum + g.completed, 0)
+
+  // Set default semester to most recent if not set
+  if (selectedSemesterId === "all" && semesters.length > 0 && selectedStudent.enrollments.length > 0) {
+    // Don't auto-set, let user choose "all" by default
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -72,7 +136,10 @@ function ParentDashboardContent() {
               return (
                 <button
                   key={student.id}
-                  onClick={() => setSelectedStudent(student)}
+                  onClick={() => {
+                    setSelectedStudent(student)
+                    setSelectedSemesterId("all") // Reset semester filter when switching students
+                  }}
                   className={cn(
                     "flex items-center gap-3 rounded-lg border px-4 py-3 transition-all",
                     isSelected
@@ -213,7 +280,13 @@ function ParentDashboardContent() {
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <BookOpen className="h-3 w-3" />
-                    {selectedStudent.enrollments.length} courses
+                    {filteredEnrollments.length} courses
+                    {selectedSemesterId !== "all" && (
+                      <span className="text-muted-foreground/70">
+                        {" "}
+                        ({selectedStudent.enrollments.length} total)
+                      </span>
+                    )}
                   </div>
                   <span>•</span>
                   <div>
@@ -269,34 +342,136 @@ function ParentDashboardContent() {
         </div>
 
         <Tabs defaultValue="grades" className="w-full">
-          <TabsList className="w-full justify-start border-b border-border bg-transparent p-0 h-auto rounded-none">
-            <TabsTrigger
-              value="grades"
-              className="rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-            >
-              <Award className="mr-2 h-4 w-4" />
-              Grades
-            </TabsTrigger>
-            <TabsTrigger
-              value="courses"
-              className="rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-            >
-              <BookOpen className="mr-2 h-4 w-4" />
-              Courses
-            </TabsTrigger>
-            <TabsTrigger
-              value="documents"
-              className="rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-            >
-              <FileText className="mr-2 h-4 w-4" />
-              Documents
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex items-center justify-between mb-4">
+            <TabsList className="justify-start border-b border-border bg-transparent p-0 h-auto rounded-none">
+              <TabsTrigger
+                value="grades"
+                className="rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+              >
+                <Award className="mr-2 h-4 w-4" />
+                Grades
+              </TabsTrigger>
+              <TabsTrigger
+                value="courses"
+                className="rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+              >
+                <BookOpen className="mr-2 h-4 w-4" />
+                Courses
+              </TabsTrigger>
+              <TabsTrigger
+                value="documents"
+                className="rounded-none border-b-2 border-transparent px-4 py-2.5 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                Documents
+              </TabsTrigger>
+            </TabsList>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  if (!selectedStudent) return
+                  setIsGeneratingPDF(true)
+                  try {
+                    const selectedSemesterName =
+                      selectedSemesterId === "all"
+                        ? "All Semesters"
+                        : semesters.find((s) => s.id === selectedSemesterId)?.name || "All Semesters"
+
+                    await generateGradesPDF({
+                      student: selectedStudent,
+                      selectedSemesterName,
+                      filteredGrades,
+                      filteredEnrollments,
+                    })
+                    toast.success("PDF generated successfully")
+                  } catch (error) {
+                    console.error("Error generating PDF:", error)
+                    toast.error("Failed to generate PDF. Please try again.")
+                  } finally {
+                    setIsGeneratingPDF(false)
+                  }
+                }}
+                disabled={isGeneratingPDF || !selectedStudent}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                {isGeneratingPDF ? "Generating..." : "Download PDF"}
+              </Button>
+              <Label htmlFor="year-select" className="text-sm text-muted-foreground">
+                Year:
+              </Label>
+              <Select
+                value={selectedYear}
+                onValueChange={(value) => {
+                  setSelectedYear(value)
+                  setSelectedSemesterId("all") // Reset semester when year changes
+                }}
+              >
+                <SelectTrigger id="year-select" className="w-[120px]">
+                  <SelectValue placeholder="Select year" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Years</SelectItem>
+                  {years.map((year) => (
+                    <SelectItem key={year} value={year}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Label htmlFor="semester-select" className="text-sm text-muted-foreground">
+                Semester:
+              </Label>
+              <Select value={selectedSemesterId} onValueChange={setSelectedSemesterId}>
+                <SelectTrigger id="semester-select" className="w-[240px]">
+                  <SelectValue placeholder="Select semester">
+                    {selectedSemesterId === "all"
+                      ? "All Semesters"
+                      : semesters.find((s) => s.id === selectedSemesterId)?.name || "Select semester"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  <SelectItem value="all">All Semesters</SelectItem>
+                  {semesters.length > 0 ? (
+                    semesters.map((semester) => {
+                      const startDate = new Date(semester.startDate)
+                      const endDate = new Date(semester.endDate)
+                      const startDateStr = startDate.toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })
+                      const endDateStr = endDate.toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })
+                      return (
+                        <SelectItem key={semester.id} value={semester.id}>
+                          <div className="flex flex-col py-0.5">
+                            <span className="font-medium leading-tight">{semester.name}</span>
+                            <span className="text-xs text-muted-foreground leading-tight">
+                              {startDateStr} - {endDateStr}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      )
+                    })
+                  ) : (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground text-center">
+                      No semesters available
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
           <TabsContent value="grades" className="mt-6 space-y-3">
-            {selectedStudent.grades.length > 0 ? (
-              selectedStudent.grades.map((grade) => (
-                <Card key={grade.courseCode} className="border-border/50 hover:border-primary/20 transition-colors">
+            {filteredGrades.length > 0 ? (
+              filteredGrades.map((grade) => (
+                <Card key={grade.courseCode} className="border-border/50 hover:border-primary/20 transition-colors mb-10">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 space-y-2">
@@ -347,23 +522,27 @@ function ParentDashboardContent() {
             ) : (
               <Card>
                 <CardContent className="py-8 text-center text-muted-foreground">
-                  <p>No grades available. You may not have permission to view grades.</p>
+                  <p>
+                    {selectedStudent.grades.length === 0
+                      ? "No grades available. You may not have permission to view grades."
+                      : `No grades found for ${selectedSemesterId === "all" ? "any semester" : semesters.find((s) => s.id === selectedSemesterId)?.name || "selected semester"}.`}
+                  </p>
                 </CardContent>
               </Card>
             )}
           </TabsContent>
 
           <TabsContent value="courses" className="mt-6 space-y-3">
-            {selectedStudent.enrollments.length > 0 ? (
-              selectedStudent.enrollments.map((enrollment) => {
-                const gradeInfo = selectedStudent.grades.find(
-                  (g) => g.courseCode === enrollment.courseCode
+            {filteredEnrollments.length > 0 ? (
+              filteredEnrollments.map((enrollment) => {
+                const gradeInfo = filteredGrades.find(
+                  (g) => g.courseCode === enrollment.courseCode && g.semesterId === enrollment.semesterId
                 )
 
                 return (
                   <Card
                     key={enrollment.courseCode}
-                    className="border-border/50 hover:border-primary/20 transition-colors"
+                    className="border-border/50 hover:border-primary/20 transition-colors mb-10"
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-4">
@@ -412,7 +591,11 @@ function ParentDashboardContent() {
             ) : (
               <Card>
                 <CardContent className="py-8 text-center text-muted-foreground">
-                  <p>No courses enrolled.</p>
+                  <p>
+                    {selectedStudent.enrollments.length === 0
+                      ? "No courses enrolled."
+                      : `No courses found for ${selectedSemesterId === "all" ? "any semester" : semesters.find((s) => s.id === selectedSemesterId)?.name || "selected semester"}.`}
+                  </p>
                 </CardContent>
               </Card>
             )}
@@ -421,7 +604,7 @@ function ParentDashboardContent() {
           <TabsContent value="documents" className="mt-6 space-y-3">
             {selectedStudent.documents.length > 0 ? (
               selectedStudent.documents.map((doc, index) => (
-                <Card key={index} className="border-border/50 hover:border-primary/20 transition-colors">
+                <Card key={index} className="border-border/50 hover:border-primary/20 transition-colors mb-10">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-3 flex-1">

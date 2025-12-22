@@ -290,7 +290,7 @@ export function Sidebar() {
       </ScrollArea>
 
       {/* Footer - User Profile */}
-      <div className="relative p-4 border-t border-sidebar-border/30 backdrop-blur-sm flex-shrink-0">
+      <div className="relative p-4 border-t border-sidebar-border/30 backdrop-blur-sm flex-shrink-0 mb-20">
         <div className="absolute inset-0 bg-gradient-to-t from-sidebar-accent/5 to-transparent" />
 
         <div className="relative group">

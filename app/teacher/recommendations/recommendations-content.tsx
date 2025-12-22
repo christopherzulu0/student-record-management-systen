@@ -779,7 +779,7 @@ export function RecommendationsContent() {
                 </TabsContent>
             </Tabs>
 
-            <Card className="bg-amber-50 border-amber-200 dark:bg-amber-950 dark:border-amber-800">
+            <Card className="bg-amber-50 border-amber-200 dark:bg-amber-950 dark:border-amber-800 mb-20">
                 <CardHeader>
                     <CardTitle className="text-amber-900 dark:text-amber-100">Best Practices</CardTitle>
                 </CardHeader>

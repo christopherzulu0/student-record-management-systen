@@ -417,7 +417,7 @@ export function DocumentsContent() {
       </Card>
 
       {/* Optional Documents */}
-      <Card>
+      <Card className="mb-20">
         <CardHeader>
           <CardTitle>Optional Documents</CardTitle>
           <CardDescription>Additional documents you may want to provide</CardDescription>

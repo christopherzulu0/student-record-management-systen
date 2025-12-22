@@ -508,7 +508,7 @@ export function AdminStudentsContent() {
         </Card>
 
         {/* Student List */}
-        <Card className="border-none shadow-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+        <Card className="border-none shadow-lg bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm mb-20">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <div>

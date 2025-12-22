@@ -465,7 +465,7 @@ export function AdminUsersContent() {
       </Card>
 
       {/* User List */}
-      <Card>
+      <Card className="mb-20">
         <CardHeader>
           <CardTitle>User List</CardTitle>
           <CardDescription>Total: {filteredUsers.length} users</CardDescription>

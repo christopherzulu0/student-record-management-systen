@@ -250,7 +250,7 @@ function TeacherDashboardContent() {
 
           {/* Class Performance and At-Risk */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="border-none shadow-lg">
+            <Card className="border-none shadow-lg mb-10">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <BookOpen className="h-5 w-5 text-blue-600" />
@@ -277,7 +277,7 @@ function TeacherDashboardContent() {
               </CardContent>
             </Card>
 
-            <Card className="border-none shadow-lg">
+            <Card className="border-none shadow-lg mb-10">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <FileText className="h-5 w-5 text-purple-600" />
@@ -303,7 +303,7 @@ function TeacherDashboardContent() {
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-red-500 border-none shadow-lg bg-red-50 dark:bg-red-950">
+            <Card className="border-l-4 border-l-red-500 border-none shadow-lg bg-red-50 dark:bg-red-950 mb-10">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <AlertCircle className="h-5 w-5 text-red-600" />
@@ -333,7 +333,7 @@ function TeacherDashboardContent() {
 
         {/* Students Analytics Tab */}
         <TabsContent value="students" className="space-y-6 mt-6">
-          <Card className="border-none shadow-lg">
+          <Card className="border-none shadow-lg mb-10">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-indigo-600" />
@@ -377,7 +377,7 @@ function TeacherDashboardContent() {
 
         {/* Recommendations Tab */}
         <TabsContent value="recommendations" className="space-y-6 mt-6">
-          <Card className="border-none shadow-lg">
+          <Card className="border-none shadow-lg mb-10">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">

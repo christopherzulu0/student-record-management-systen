@@ -477,7 +477,7 @@ export default function StudentRecommendationsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
+        <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900 mb-20">
           <CardHeader>
             <CardTitle className="text-blue-900 dark:text-blue-100">Tips for Requesting Letters</CardTitle>
           </CardHeader>

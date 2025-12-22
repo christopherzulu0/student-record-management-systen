@@ -305,7 +305,7 @@ export function ParentsPageContent() {
         </div>
       </div>
 
-      <Card>
+      <Card className="mb-20">
         <CardHeader>
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div>

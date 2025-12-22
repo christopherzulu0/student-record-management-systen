@@ -31,6 +31,8 @@ import {
   Target,
   AlertCircle,
   CheckCircle2,
+  BookOpen,
+  Save,
 } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
 import {
@@ -53,6 +55,14 @@ export function TeacherGradesPageContent() {
   )
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isViewAllGradesDialogOpen, setIsViewAllGradesDialogOpen] = useState(false)
+  const [selectedStudentForAllGrades, setSelectedStudentForAllGrades] = useState<StudentGrade | null>(null)
+  const [allGradesEdits, setAllGradesEdits] = useState<Record<string, {
+    grade: string
+    attendance: string
+    trend: string
+    assignmentType: string
+  }>>({})
   const [editingGrade, setEditingGrade] = useState<StudentGrade | null>(null)
   const [editGradeValue, setEditGradeValue] = useState<string>("")
   const [editAttendanceValue, setEditAttendanceValue] = useState<string>("")
@@ -624,7 +634,7 @@ export function TeacherGradesPageContent() {
       </Card>
 
       {/* Grades Table */}
-      <Card>
+      <Card className="mb-20">
         <CardHeader>
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div>
@@ -739,22 +749,36 @@ export function TeacherGradesPageContent() {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1"
-                          onClick={() => {
-                            setEditingGrade(grade)
-                            setEditGradeValue(grade.currentGrade.toString())
-                            setEditAttendanceValue(grade.attendance !== null ? grade.attendance.toString() : "")
-                            setEditTrendValue(grade.trend)
-                            setEditAssignmentType(grade.assignmentType || "")
-                            setIsEditDialogOpen(true)
-                          }}
-                        >
-                          <Edit className="w-3 h-3" />
-                          Edit
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1"
+                            onClick={() => {
+                              setSelectedStudentForAllGrades(grade)
+                              setIsViewAllGradesDialogOpen(true)
+                            }}
+                          >
+                            <BookOpen className="w-3 h-3" />
+                            All Grades
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1"
+                            onClick={() => {
+                              setEditingGrade(grade)
+                              setEditGradeValue(grade.currentGrade.toString())
+                              setEditAttendanceValue(grade.attendance !== null ? grade.attendance.toString() : "")
+                              setEditTrendValue(grade.trend)
+                              setEditAssignmentType(grade.assignmentType || "")
+                              setIsEditDialogOpen(true)
+                            }}
+                          >
+                            <Edit className="w-3 h-3" />
+                            Edit
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -992,6 +1016,277 @@ export function TeacherGradesPageContent() {
               disabled={recordGradeMutation.isPending}
             >
               {recordGradeMutation.isPending ? "Updating..." : "Update Grade"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View All Grades Dialog */}
+      <Dialog 
+        open={isViewAllGradesDialogOpen} 
+        onOpenChange={(open) => {
+          setIsViewAllGradesDialogOpen(open)
+          if (open && selectedStudentForAllGrades) {
+            // Initialize edit state when dialog opens
+            const initialEdits: Record<string, {
+              grade: string
+              attendance: string
+              trend: string
+              assignmentType: string
+            }> = {}
+            
+            data.courses.forEach((course) => {
+              const courseGrades = data.gradesByCourse[course.id]
+              const studentGrade = courseGrades?.students.find(
+                (g) => g.studentId === selectedStudentForAllGrades.studentId
+              )
+              
+              if (studentGrade) {
+                initialEdits[course.id] = {
+                  grade: studentGrade.currentGrade.toString(),
+                  attendance: studentGrade.attendance !== null ? studentGrade.attendance.toString() : "",
+                  trend: studentGrade.trend,
+                  assignmentType: studentGrade.assignmentType || "",
+                }
+              }
+            })
+            
+            setAllGradesEdits(initialEdits)
+          } else {
+            setAllGradesEdits({})
+            setSelectedStudentForAllGrades(null)
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0">
+            <DialogTitle className="text-xl">
+              All Grades for {selectedStudentForAllGrades?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Student ID: {selectedStudentForAllGrades?.studentId} • View and edit all grades across all courses
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto px-6 min-h-0">
+            {selectedStudentForAllGrades && (
+              <div className="space-y-4 py-4">
+                {data.courses.map((course) => {
+                  const courseGrades = data.gradesByCourse[course.id]
+                  const studentGrade = courseGrades?.students.find(
+                    (g) => g.studentId === selectedStudentForAllGrades.studentId
+                  )
+                  
+                  if (!studentGrade) return null
+
+                  const courseEdit = allGradesEdits[course.id] || {
+                    grade: studentGrade.currentGrade.toString(),
+                    attendance: studentGrade.attendance !== null ? studentGrade.attendance.toString() : "",
+                    trend: studentGrade.trend,
+                    assignmentType: studentGrade.assignmentType || "",
+                  }
+
+                  return (
+                    <Card key={course.id} className="border-border">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">{course.displayName}</CardTitle>
+                        <CardDescription>
+                          Semester: {studentGrade.semesterName || "N/A"}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor={`grade-${course.id}`} className="text-sm font-medium">
+                              Grade (0-100)
+                            </Label>
+                            <Input
+                              id={`grade-${course.id}`}
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={courseEdit.grade}
+                              onChange={(e) => {
+                                setAllGradesEdits(prev => ({
+                                  ...prev,
+                                  [course.id]: {
+                                    ...(prev[course.id] || courseEdit),
+                                    grade: e.target.value,
+                                  }
+                                }))
+                              }}
+                              className="w-full"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor={`attendance-${course.id}`} className="text-sm font-medium">
+                              Attendance (%)
+                            </Label>
+                            <Input
+                              id={`attendance-${course.id}`}
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={courseEdit.attendance}
+                              onChange={(e) => {
+                                setAllGradesEdits(prev => ({
+                                  ...prev,
+                                  [course.id]: {
+                                    ...(prev[course.id] || courseEdit),
+                                    attendance: e.target.value,
+                                  }
+                                }))
+                              }}
+                              placeholder="N/A"
+                              className="w-full"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor={`trend-${course.id}`} className="text-sm font-medium">
+                              Performance Trend
+                            </Label>
+                            <Select 
+                              value={courseEdit.trend}
+                              onValueChange={(value) => {
+                                setAllGradesEdits(prev => ({
+                                  ...prev,
+                                  [course.id]: {
+                                    ...(prev[course.id] || courseEdit),
+                                    trend: value,
+                                  }
+                                }))
+                              }}
+                            >
+                              <SelectTrigger id={`trend-${course.id}`}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="up">Up - Improving</SelectItem>
+                                <SelectItem value="stable">Stable - Consistent</SelectItem>
+                                <SelectItem value="down">Down - Declining</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor={`type-${course.id}`} className="text-sm font-medium">
+                              Assignment Type
+                            </Label>
+                            <Select 
+                              value={courseEdit.assignmentType}
+                              onValueChange={(value) => {
+                                setAllGradesEdits(prev => ({
+                                  ...prev,
+                                  [course.id]: {
+                                    ...(prev[course.id] || courseEdit),
+                                    assignmentType: value,
+                                  }
+                                }))
+                              }}
+                            >
+                              <SelectTrigger id={`type-${course.id}`}>
+                                <SelectValue placeholder="Select type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="midterm">Midterm Exam</SelectItem>
+                                <SelectItem value="final">Final Exam</SelectItem>
+                                <SelectItem value="assignment">Assignment</SelectItem>
+                                <SelectItem value="project">Project</SelectItem>
+                                <SelectItem value="participation">Participation</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2 px-6 pb-6 pt-4 border-t flex-shrink-0">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                setIsViewAllGradesDialogOpen(false)
+                setSelectedStudentForAllGrades(null)
+                setAllGradesEdits({})
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="flex-1 gap-2"
+              onClick={async () => {
+                if (!selectedStudentForAllGrades) return
+
+                try {
+                  const updatePromises: Promise<any>[] = []
+
+                  // Update all grades
+                  for (const course of data.courses) {
+                    const courseGrades = data.gradesByCourse[course.id]
+                    const studentGrade = courseGrades?.students.find(
+                      (g) => g.studentId === selectedStudentForAllGrades.studentId
+                    )
+
+                    if (!studentGrade || !studentGrade.semesterId) continue
+
+                    const courseEdit = allGradesEdits[course.id]
+                    if (!courseEdit) continue
+
+                    const newScore = Number(courseEdit.grade)
+                    const newAttendance = courseEdit.attendance && courseEdit.attendance.trim() !== ''
+                      ? Number(courseEdit.attendance)
+                      : null
+                    const newTrend = courseEdit.trend as "up" | "down" | "stable" || studentGrade.trend
+                    const newAssignmentType = courseEdit.assignmentType || undefined
+
+                    // Only update if values changed
+                    if (
+                      newScore !== studentGrade.currentGrade ||
+                      newAttendance !== studentGrade.attendance ||
+                      newTrend !== studentGrade.trend ||
+                      newAssignmentType !== (studentGrade.assignmentType || "")
+                    ) {
+                      updatePromises.push(
+                        recordGradeMutation.mutateAsync({
+                          studentId: studentGrade.studentModelId || studentGrade.id.replace('pending-', ''),
+                          courseId: course.id,
+                          semesterId: studentGrade.semesterId,
+                          score: newScore,
+                          attendance: newAttendance,
+                          trend: newTrend,
+                          assignmentType: newAssignmentType,
+                        })
+                      )
+                    }
+                  }
+
+                  if (updatePromises.length === 0) {
+                    toast.info("No changes to save")
+                    setIsViewAllGradesDialogOpen(false)
+                    setSelectedStudentForAllGrades(null)
+                    setAllGradesEdits({})
+                    return
+                  }
+
+                  await Promise.all(updatePromises)
+                  toast.success(`Successfully updated ${updatePromises.length} grade(s)`)
+                  setIsViewAllGradesDialogOpen(false)
+                  setSelectedStudentForAllGrades(null)
+                  setAllGradesEdits({})
+                } catch (error) {
+                  toast.error(error instanceof Error ? error.message : "Failed to update grades")
+                }
+              }}
+              disabled={recordGradeMutation.isPending}
+            >
+              <Save className="w-4 h-4" />
+              {recordGradeMutation.isPending ? "Saving..." : "Save All Changes"}
             </Button>
           </div>
         </DialogContent>

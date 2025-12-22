@@ -386,7 +386,7 @@ export function AdminTeachersContent() {
       </Card>
 
       {/* Teachers List */}
-      <Card>
+      <Card className="mb-20">
         <CardHeader>
           <CardTitle>Faculty Directory</CardTitle>
           <CardDescription>Total: {filteredTeachers.length} teachers</CardDescription>

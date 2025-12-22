@@ -19,6 +19,8 @@ import { Download, TrendingUp } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import { useState } from "react"
 import { useStudentGrades } from "@/lib/hooks/use-student-grades"
+import { generateStudentGradesPDF } from "@/lib/utils/pdf-generator-student"
+import { toast } from "sonner"
 
 const getGradeBadgeColor = (grade: string) => {
   if (grade.startsWith("A")) return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
@@ -34,6 +36,7 @@ export function StudentGradesPageContent() {
   const [selectedSemester, setSelectedSemester] = useState("all")
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
 
   const filteredGrades = grades.filter(
     (grade) => selectedSemester === "all" || grade.semester === selectedSemester,
@@ -63,9 +66,28 @@ export function StudentGradesPageContent() {
           <h1 className="text-3xl font-bold">My Grades</h1>
           <p className="text-muted-foreground mt-2">View all your course grades and performance metrics</p>
         </div>
-        <Button variant="outline">
+        <Button
+          variant="outline"
+          onClick={async () => {
+            setIsGeneratingPDF(true)
+            try {
+              await generateStudentGradesPDF({
+                grades: filteredGrades,
+                statistics,
+                selectedSemester,
+              })
+              toast.success("PDF generated successfully")
+            } catch (error) {
+              console.error("Error generating PDF:", error)
+              toast.error("Failed to generate PDF. Please try again.")
+            } finally {
+              setIsGeneratingPDF(false)
+            }
+          }}
+          disabled={isGeneratingPDF}
+        >
           <Download className="w-4 h-4 mr-2" />
-          Export
+          {isGeneratingPDF ? "Generating..." : "Download PDF"}
         </Button>
       </div>
 
@@ -126,7 +148,7 @@ export function StudentGradesPageContent() {
         </Card>
       )}
 
-      <Card>
+      <Card className="mb-20">
         <CardHeader>
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div>

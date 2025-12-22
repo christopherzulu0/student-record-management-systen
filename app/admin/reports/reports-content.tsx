@@ -78,7 +78,7 @@ export function AdminReportsContent() {
             </Card>
             </div>
 
-            <Card>
+            <Card className="mb-20">
               <CardHeader>
                 <CardTitle>Semester Trends</CardTitle>
                 <CardDescription>GPA and enrollment over time</CardDescription>

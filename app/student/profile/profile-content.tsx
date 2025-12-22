@@ -311,17 +311,21 @@ export function StudentProfilePageContent() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Computer Science">Computer Science</SelectItem>
-                  <SelectItem value="Mathematics">Mathematics</SelectItem>
-                  <SelectItem value="Engineering">Engineering</SelectItem>
-                  <SelectItem value="Business">Business</SelectItem>
-                  <SelectItem value="Arts">Arts</SelectItem>
+                  <SelectItem value="Academic">Academic</SelectItem>
+                  <SelectItem value="TVET">TVET</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="yearOfStudy">Year of Study *</Label>
-              <Select
+              <Input
+                id="yearOfStudy"
+                type="number"
+                value={formData.yearOfStudy}
+                onChange={(e) => handleInputChange("yearOfStudy", e.target.value)}
+                disabled={!isEditing}
+              />
+              {/* <Select
                 value={formData.yearOfStudy}
                 onValueChange={(value) => handleInputChange("yearOfStudy", value)}
                 disabled={!isEditing}
@@ -335,7 +339,7 @@ export function StudentProfilePageContent() {
                   <SelectItem value="3">Year 3</SelectItem>
                   <SelectItem value="4">Year 4</SelectItem>
                 </SelectContent>
-              </Select>
+              </Select> */}
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="expectedGraduation">Expected Graduation Date *</Label>
@@ -416,7 +420,7 @@ export function StudentProfilePageContent() {
       </Card>
 
       {/* Additional Information */}
-      <Card>
+      <Card className="mb-20">
         <CardHeader>
           <CardTitle>Additional Information</CardTitle>
           <CardDescription>Tell us more about yourself (optional)</CardDescription>

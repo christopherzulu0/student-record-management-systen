@@ -50,7 +50,7 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-    <html lang="en" suppressHydrationWarning className="h-full ">
+    <html lang="en" suppressHydrationWarning className="h-full overflow-hidden" >
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased h-full `}
       >

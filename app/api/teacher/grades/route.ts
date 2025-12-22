@@ -5,6 +5,15 @@ import {prisma} from '@/lib/prisma'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
+// Helper function to calculate letter grade from score
+const getLetterGrade = (score: number): string => {
+  if (score >= 90) return 'A'
+  if (score >= 80) return 'B'
+  if (score >= 70) return 'C'
+  if (score >= 60) return 'D'
+  return 'F'
+}
+
 // GET - Fetch teacher's grades data
 export async function GET() {
   try {
@@ -218,13 +227,17 @@ export async function GET() {
             console.error('[API] Error parsing assignments:', error)
           }
           
+          // Recalculate letter grade based on current score to ensure consistency
+          const roundedScore = Math.round(studentGrade.score)
+          const recalculatedLetterGrade = getLetterGrade(roundedScore)
+          
           studentGrades.push({
             id: studentGrade.id,
             studentModelId: studentId, // Student model ID for API calls
             studentId: student.studentId,
             name: student.name,
             course: course.courseCode,
-            currentGrade: Math.round(studentGrade.score),
+            currentGrade: roundedScore,
             attendance: studentGrade.attendance !== null && studentGrade.attendance !== undefined 
               ? Math.round(studentGrade.attendance) 
               : null,
@@ -419,22 +432,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Calculate letter grade from score
-    const getLetterGrade = (score: number): string => {
-      if (score >= 97) return 'A_PLUS'
-      if (score >= 93) return 'A'
-      if (score >= 90) return 'A_MINUS'
-      if (score >= 87) return 'B_PLUS'
-      if (score >= 83) return 'B'
-      if (score >= 80) return 'B_MINUS'
-      if (score >= 77) return 'C_PLUS'
-      if (score >= 73) return 'C'
-      if (score >= 70) return 'C_MINUS'
-      if (score >= 67) return 'D_PLUS'
-      if (score >= 63) return 'D'
-      if (score >= 60) return 'D_MINUS'
-      return 'F'
-    }
+    // Use the helper function defined at the top of the file
 
     // Check if grade already exists
     const existingGrade = await prisma.grade.findUnique({
@@ -448,24 +446,30 @@ export async function POST(request: NextRequest) {
     })
 
     // Prepare assignments JSON with assignment type if provided
-    const assignmentsData = assignmentType ? { type: assignmentType } : undefined
+    const assignmentsData = assignmentType ? { type: assignmentType } : null
 
     let grade
     if (existingGrade) {
       // Update existing grade
+      const updateData: any = {
+        score: Number(score),
+        letterGrade: getLetterGrade(Number(score)) as any,
+        attendance: attendance !== null && attendance !== undefined && attendance !== '' 
+          ? Number(attendance) 
+          : null,
+        trend: trend || undefined,
+        comments: comments || undefined,
+        teacherId: teacher.id,
+      }
+      
+      // Only update assignments if assignmentType is provided
+      if (assignmentsData !== null) {
+        updateData.assignments = assignmentsData
+      }
+      
       grade = await prisma.grade.update({
         where: { id: existingGrade.id },
-        data: {
-          score: Number(score),
-          letterGrade: getLetterGrade(Number(score)) as any,
-          attendance: attendance !== null && attendance !== undefined && attendance !== '' 
-            ? Number(attendance) 
-            : null,
-          trend: trend || undefined,
-          comments: comments || undefined,
-          assignments: assignmentsData || existingGrade.assignments, // Preserve existing assignments if not updating
-          teacherId: teacher.id,
-        },
+        data: updateData,
         include: {
           student: {
             include: {
@@ -535,15 +539,34 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Type assertion for Prisma include relations
+    const gradeWithRelations = grade as typeof grade & {
+      student: {
+        studentId: string
+        user: {
+          firstName: string
+          lastName: string
+          email: string
+        }
+      }
+      course: {
+        courseCode: string
+        name: string
+      }
+      semester: {
+        name: string
+      }
+    }
+
     return NextResponse.json({
       message: existingGrade ? 'Grade updated successfully' : 'Grade recorded successfully',
       grade: {
         id: grade.id,
-        studentId: grade.student.studentId,
-        studentName: `${grade.student.user.firstName} ${grade.student.user.lastName}`,
-        courseCode: grade.course.courseCode,
-        courseName: grade.course.name,
-        semesterName: grade.semester.name,
+        studentId: gradeWithRelations.student.studentId,
+        studentName: `${gradeWithRelations.student.user.firstName} ${gradeWithRelations.student.user.lastName}`,
+        courseCode: gradeWithRelations.course.courseCode,
+        courseName: gradeWithRelations.course.name,
+        semesterName: gradeWithRelations.semester.name,
         score: grade.score,
         letterGrade: grade.letterGrade,
         attendance: grade.attendance,

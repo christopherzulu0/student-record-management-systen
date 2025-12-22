@@ -357,7 +357,7 @@ export function TeachersContent() {
                             "bg-gradient-to-br backdrop-blur-sm",
                             deptColors.bg,
                             deptColors.border,
-                            "border-2 shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2"
+                            "border-2 shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 mb-20"
                           )}
                         >
                           {/* Glow effect */}

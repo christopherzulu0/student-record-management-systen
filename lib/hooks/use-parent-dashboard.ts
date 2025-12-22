@@ -30,10 +30,14 @@ export interface Child {
     courseName: string
     credits: number
     status: string
+    semesterId: string
+    semesterName: string
   }>
   grades: Array<{
     courseCode: string
     courseName: string
+    semesterId: string
+    semesterName: string
     score: number
     letterGrade: string
     attendance: number | null
@@ -58,6 +62,13 @@ export interface Child {
 export interface ParentDashboardData {
   parent: Parent
   children: Child[]
+  semesters: Array<{
+    id: string
+    name: string
+    isActive: boolean
+    startDate: string
+    endDate: string
+  }>
 }
 
 async function fetchParentDashboard(): Promise<ParentDashboardData> {

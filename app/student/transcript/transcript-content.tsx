@@ -18,6 +18,8 @@ import { Download, Printer, Share2, Award } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useState } from "react"
 import { useStudentTranscript } from "@/lib/hooks/use-student-transcript"
+import { generateStudentTranscriptPDF } from "@/lib/utils/pdf-generator-student"
+import { toast } from "sonner"
 
 const getGradeColor = (grade: string) => {
   if (grade.startsWith("A")) return "text-green-600 font-semibold dark:text-green-400"
@@ -42,6 +44,7 @@ export function StudentTranscriptPageContent() {
 
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(5)
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
 
   // Pagination calculations for semesters
   const totalPages = Math.ceil(semesters.length / itemsPerPage)
@@ -58,34 +61,17 @@ export function StudentTranscriptPageContent() {
     window.print()
   }
 
-  const handleDownload = () => {
-    const transcriptText = `
-OFFICIAL ACADEMIC TRANSCRIPT
-Student: ${studentName}
-Student ID: ${studentId}
-Email: ${email}
-Enrollment Date: ${enrollmentDate}
-
-CUMULATIVE GPA: ${cumulativeGPA}
-Credits Earned: ${totalCreditsEarned} / ${totalCreditsRequired}
-
-${semesters
-  .map(
-    (sem) => `
-SEMESTER: ${sem.semester}
-GPA: ${sem.gpa}
-${sem.courses.map((course) => `${course.code} - ${course.name} | Credits: ${course.credits} | Grade: ${course.grade} | Score: ${course.score}`).join("\n")}
-`,
-  )
-  .join("\n")}
-    `
-    const element = document.createElement("a")
-    element.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(transcriptText))
-    element.setAttribute("download", `transcript_${studentId}.txt`)
-    element.style.display = "none"
-    document.body.appendChild(element)
-    element.click()
-    document.body.removeChild(element)
+  const handleDownload = async () => {
+    setIsGeneratingPDF(true)
+    try {
+      await generateStudentTranscriptPDF(data)
+      toast.success("PDF generated successfully")
+    } catch (error) {
+      console.error("Error generating PDF:", error)
+      toast.error("Failed to generate PDF. Please try again.")
+    } finally {
+      setIsGeneratingPDF(false)
+    }
   }
 
   return (
@@ -96,17 +82,17 @@ ${sem.courses.map((course) => `${course.code} - ${course.name} | Credits: ${cour
           <p className="text-muted-foreground mt-2">Official record of your academic performance</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handlePrint}>
+          {/* <Button variant="outline" onClick={handlePrint}>
             <Printer className="w-4 h-4 mr-2" />
             Print
           </Button>
           <Button variant="outline">
             <Share2 className="w-4 h-4 mr-2" />
             Share
-          </Button>
-          <Button onClick={handleDownload}>
+          </Button> */}
+          <Button onClick={handleDownload} disabled={isGeneratingPDF}>
             <Download className="w-4 h-4 mr-2" />
-            Download
+            {isGeneratingPDF ? "Generating..." : "Download PDF"}
           </Button>
         </div>
       </div>
@@ -285,7 +271,7 @@ ${sem.courses.map((course) => `${course.code} - ${course.name} | Credits: ${cour
         </Card>
       )}
 
-      <Card className="bg-blue-50 border-blue-200 print:shadow-none print:border-0 print:bg-white dark:bg-blue-950 dark:border-blue-800">
+      <Card className="bg-blue-50 border-blue-200 print:shadow-none print:border-0 print:bg-white dark:bg-blue-950 dark:border-blue-800 mb-20">
         <CardHeader>
           <CardTitle className="text-blue-900 dark:text-blue-100">Academic Standing</CardTitle>
         </CardHeader>

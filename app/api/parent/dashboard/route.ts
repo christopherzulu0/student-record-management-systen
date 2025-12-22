@@ -67,6 +67,21 @@ export async function GET() {
       )
     }
 
+    // Fetch all semesters (including inactive ones) for the dropdown
+    const allSemesters = await prisma.semester.findMany({
+      orderBy: [
+        { isActive: 'desc' },
+        { startDate: 'desc' },
+      ],
+      select: {
+        id: true,
+        name: true,
+        startDate: true,
+        endDate: true,
+        isActive: true,
+      },
+    })
+
     // Fetch all parent-student relationships with permissions
     const parentStudents = await prisma.parentStudent.findMany({
       where: { parentId: parent.id },
@@ -187,6 +202,8 @@ export async function GET() {
             return {
               courseCode: enrollment.course.courseCode,
               courseName: enrollment.course.name,
+              semesterId: enrollment.semester.id,
+              semesterName: enrollment.semester.name,
               score: Math.round(score),
               letterGrade: letterGrade || 'N/A',
               attendance: canViewAttendance ? (grade?.attendance || 0) : null,
@@ -253,6 +270,8 @@ export async function GET() {
             courseName: e.course.name,
             credits: e.course.credits,
             status: e.status,
+            semesterId: e.semester.id,
+            semesterName: e.semester.name,
           })),
           grades: canViewGrades ? grades : [],
           documents: canViewDocuments ? documents : [],
@@ -274,6 +293,13 @@ export async function GET() {
         relationship: parentStudents.find((ps) => ps.isPrimary)?.relationship || null,
       },
       children,
+      semesters: allSemesters.map((s) => ({
+        id: s.id,
+        name: s.name,
+        isActive: s.isActive,
+        startDate: s.startDate.toISOString(),
+        endDate: s.endDate.toISOString(),
+      })),
     })
   } catch (error) {
     console.error('[API] Error fetching parent dashboard:', error)
