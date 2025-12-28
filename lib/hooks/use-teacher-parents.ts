@@ -28,7 +28,7 @@ export interface StudentWithParents {
   phone?: string
   program?: string
   yearOfStudy?: number
-  cumulativeGPA?: number
+  average?: number
   status: string
   parents: Parent[]
 }

@@ -15,7 +15,7 @@ export interface StudentGrade {
 }
 
 export interface StudentGradesStatistics {
-  currentGPA: number
+  average: number
   creditsEarned: number
   totalCreditsRequired: number
   averageGrade: string

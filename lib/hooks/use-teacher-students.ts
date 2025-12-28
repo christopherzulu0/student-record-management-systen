@@ -21,7 +21,7 @@ export interface Student {
   id: string
   name: string
   email: string
-  gpa: number
+  average: number
   grade: string
   status: string
   trend: string

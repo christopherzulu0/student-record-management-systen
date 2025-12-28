@@ -135,43 +135,32 @@ export async function GET() {
       },
     })
 
+    // Helper function to calculate letter grade from score (matches teacher grades API)
+    const getLetterGrade = (score: number): string => {
+      if (score >= 90) return 'A'
+      if (score >= 80) return 'B'
+      if (score >= 70) return 'C'
+      if (score >= 60) return 'D'
+      return 'F'
+    }
+
     // Format students data
     const formattedStudents = students.map(student => {
-      // Calculate average grade from teacher's courses
+      // Calculate average grade from teacher's courses (simple average)
       const courseGrades = student.grades.filter(g => courseIds.includes(g.courseId))
-      const avgScore = courseGrades.length > 0
-        ? courseGrades.reduce((sum, g) => sum + g.score, 0) / courseGrades.length
+      const average = courseGrades.length > 0
+        ? Number((courseGrades.reduce((sum, g) => sum + g.score, 0) / courseGrades.length).toFixed(2))
         : 0
 
-      // Convert score to GPA (assuming 0-100 scale, convert to 0-4 scale)
-      const gpa = (avgScore / 100) * 4
+      const grade = getLetterGrade(Math.round(average))
 
-      // Determine grade letter
-      const getGradeLetter = (score: number): string => {
-        if (score >= 97) return 'A+'
-        if (score >= 93) return 'A'
-        if (score >= 90) return 'A-'
-        if (score >= 87) return 'B+'
-        if (score >= 83) return 'B'
-        if (score >= 80) return 'B-'
-        if (score >= 77) return 'C+'
-        if (score >= 73) return 'C'
-        if (score >= 70) return 'C-'
-        if (score >= 67) return 'D+'
-        if (score >= 63) return 'D'
-        if (score >= 60) return 'D-'
-        return 'F'
-      }
-
-      const grade = getGradeLetter(avgScore)
-
-      // Determine status
+      // Determine status based on average (0-100 scale)
       let status = 'Good Standing'
       let trend = 'stable'
-      if (gpa >= 3.5) {
+      if (average >= 90) {
         status = 'Excellent'
         trend = 'up'
-      } else if (gpa < 3.0) {
+      } else if (average < 70) {
         status = 'At Risk'
         trend = 'down'
       }
@@ -194,7 +183,7 @@ export async function GET() {
         id: student.studentId,
         name: `${student.user.firstName} ${student.user.lastName}`.trim(),
         email: student.user.email,
-        gpa: student.cumulativeGPA || gpa,
+        average,
         grade,
         status,
         trend,
@@ -202,10 +191,10 @@ export async function GET() {
       }
     })
 
-    // Calculate statistics
+    // Calculate statistics based on average (0-100 scale)
     const total = formattedStudents.length
-    const excellent = formattedStudents.filter(s => s.gpa >= 3.5).length
-    const atRisk = formattedStudents.filter(s => s.gpa < 3.0).length
+    const excellent = formattedStudents.filter(s => s.average >= 90).length
+    const atRisk = formattedStudents.filter(s => s.average < 70).length
     const goodStanding = total - excellent - atRisk
 
     return NextResponse.json({

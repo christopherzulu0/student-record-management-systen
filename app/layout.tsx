@@ -50,9 +50,9 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-    <html lang="en" suppressHydrationWarning className="h-full overflow-hidden" >
+    <html lang="en" suppressHydrationWarning className="h-full overflow-hidden">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased h-full `}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased h-full overflow-hidden`}
       >
         <QueryProvider>
         <Navbar/>

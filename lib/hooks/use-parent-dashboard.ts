@@ -19,8 +19,8 @@ export interface Child {
   lastName: string
   program: string | null
   yearOfStudy: number | null
-  cumulativeGPA: number
-  semesterGPA: number
+  average: number
+  semesterAverage: number
   totalCreditsEarned: number
   totalCreditsRequired: number
   status: string
@@ -51,9 +51,9 @@ export interface Child {
     required: boolean
     expiryDate: string | null
   }>
-  gpaHistory: Array<{
+  averageHistory: Array<{
     semester: string
-    gpa: number
+    average: number
   }>
   relationship: string | null
   isPrimary: boolean

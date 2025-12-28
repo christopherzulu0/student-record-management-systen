@@ -12,7 +12,7 @@ export interface TranscriptCourse {
 
 export interface TranscriptSemester {
   semester: string
-  gpa: number
+  average: number
   courses: TranscriptCourse[]
 }
 
@@ -21,7 +21,7 @@ export interface StudentTranscriptResponse {
   studentId: string
   email: string
   enrollmentDate: string
-  cumulativeGPA: number
+  average: number
   totalCreditsEarned: number
   totalCreditsRequired: number
   academicStanding: string

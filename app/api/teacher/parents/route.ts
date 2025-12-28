@@ -94,6 +94,28 @@ export async function GET() {
       distinct: ['studentId'],
     })
 
+    // Fetch all grades for calculating averages
+    const allGrades = await prisma.grade.findMany({
+      where: {
+        studentId: { in: enrollments.map(e => e.student.id) },
+      },
+      select: {
+        studentId: true,
+        score: true,
+      },
+    })
+
+    // Group grades by student
+    const gradesByStudent = new Map<string, number[]>()
+    allGrades.forEach(grade => {
+      if (grade.score > 0) {
+        if (!gradesByStudent.has(grade.studentId)) {
+          gradesByStudent.set(grade.studentId, [])
+        }
+        gradesByStudent.get(grade.studentId)!.push(grade.score)
+      }
+    })
+
     // Format students with their parents
     const students = enrollments.map(enrollment => {
       const student = enrollment.student
@@ -113,6 +135,12 @@ export async function GET() {
         canViewDocuments: ps.canViewDocuments,
       }))
 
+      // Calculate average from grades
+      const studentGrades = gradesByStudent.get(student.id) || []
+      const average = studentGrades.length > 0
+        ? Number((studentGrades.reduce((sum, score) => sum + score, 0) / studentGrades.length).toFixed(2))
+        : (student.cumulativeGPA || 0)
+
       return {
         id: student.id,
         studentId: student.studentId,
@@ -123,7 +151,7 @@ export async function GET() {
         phone: student.user.phone,
         program: student.program,
         yearOfStudy: student.yearOfStudy,
-        cumulativeGPA: student.cumulativeGPA,
+        average,
         status: student.status,
         parents,
       }

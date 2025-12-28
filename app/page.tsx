@@ -15,8 +15,7 @@ import CTA from "@/components/cta"
 import Footer from "@/components/footer"
 export default function Home() {
   return (
- <>
- <div className="min-h-screen bg-background">
+    <div className="h-full overflow-y-auto bg-background">
       {/* <Navbar /> */}
       <Hero />
       <Features />
@@ -25,6 +24,5 @@ export default function Home() {
       <CTA />
       <Footer />
     </div>
- </>
   );
 }

@@ -28,6 +28,15 @@ const getGradeColor = (grade: string) => {
   return "text-red-600 font-semibold dark:text-red-400"
 }
 
+const getGradeComment = (grade: string): string => {
+  if (grade.startsWith("A")) return "Excellent"
+  if (grade.startsWith("B")) return "Very Good"
+  if (grade.startsWith("C")) return "Good"
+  if (grade.startsWith("D")) return "Passed"
+  if (grade.startsWith("F")) return "Failed"
+  return "N/A"
+}
+
 export function StudentTranscriptPageContent() {
   const { data } = useStudentTranscript()
   const {
@@ -35,7 +44,7 @@ export function StudentTranscriptPageContent() {
     studentId,
     email,
     enrollmentDate,
-    cumulativeGPA,
+    average,
     totalCreditsEarned,
     totalCreditsRequired,
     academicStanding,
@@ -120,8 +129,8 @@ export function StudentTranscriptPageContent() {
                 <p className="font-semibold">{new Date(enrollmentDate).toLocaleDateString()}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Cumulative GPA</p>
-                <p className="text-2xl font-bold text-primary">{cumulativeGPA.toFixed(2)}</p>
+                <p className="text-xs text-muted-foreground">Average</p>
+                <p className="text-2xl font-bold text-primary">{average.toFixed(2)}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Credits Progress</p>
@@ -171,7 +180,7 @@ export function StudentTranscriptPageContent() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>{semester.semester}</CardTitle>
-                <CardDescription>Semester GPA: {semester.gpa.toFixed(2)}</CardDescription>
+                <CardDescription>Semester Average: {semester.average.toFixed(2)}</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -183,6 +192,7 @@ export function StudentTranscriptPageContent() {
                   <TableHead>Course Name</TableHead>
                   <TableHead>Credits</TableHead>
                   <TableHead>Grade</TableHead>
+                  <TableHead>Comment</TableHead>
                   <TableHead>Score</TableHead>
                 </TableRow>
               </TableHeader>
@@ -193,6 +203,7 @@ export function StudentTranscriptPageContent() {
                     <TableCell>{course.name}</TableCell>
                     <TableCell>{course.credits}</TableCell>
                     <TableCell className={getGradeColor(course.grade)}>{course.grade}</TableCell>
+                    <TableCell className="text-muted-foreground">{getGradeComment(course.grade)}</TableCell>
                     <TableCell>{course.score > 0 ? `${course.score}%` : 'N/A'}</TableCell>
                   </TableRow>
                 ))}
@@ -277,7 +288,7 @@ export function StudentTranscriptPageContent() {
         </CardHeader>
         <CardContent className="space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-sm">Your cumulative GPA of {cumulativeGPA.toFixed(2)} is {academicStanding === 'Excellent' ? 'excellent' : academicStanding === 'Good Standing' ? 'good' : 'below expectations'}.</p>
+            <p className="text-sm">Your average of {average.toFixed(2)} is {academicStanding === 'Excellent' ? 'excellent' : academicStanding === 'Good Standing' ? 'good' : 'below expectations'}.</p>
           </div>
           <div className="flex items-center justify-between">
             <p className="text-sm">

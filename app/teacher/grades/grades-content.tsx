@@ -47,6 +47,25 @@ import {
 import { useTeacherGrades, useRecordGrade, type StudentGrade } from "@/lib/hooks/use-teacher-grades"
 import { toast } from "sonner"
 
+// Helper function to convert score to letter grade (matches API grading)
+const getLetterGrade = (score: number): string => {
+  if (score >= 90) return 'A'
+  if (score >= 80) return 'B'
+  if (score >= 70) return 'C'
+  if (score >= 60) return 'D'
+  return 'F'
+}
+
+// Helper function to get grade comment
+const getGradeComment = (grade: string): string => {
+  if (grade.startsWith("A")) return "Excellent"
+  if (grade.startsWith("B")) return "Very Good"
+  if (grade.startsWith("C")) return "Good"
+  if (grade.startsWith("D")) return "Passed"
+  if (grade.startsWith("F")) return "Failed"
+  return "N/A"
+}
+
 export function TeacherGradesPageContent() {
   const { data } = useTeacherGrades()
   const recordGradeMutation = useRecordGrade()
@@ -677,6 +696,8 @@ export function TeacherGradesPageContent() {
                   <TableHead className="font-semibold">Student ID</TableHead>
                   <TableHead className="font-semibold">Name</TableHead>
                   <TableHead className="font-semibold">Grade</TableHead>
+                  <TableHead className="font-semibold">Letter Grade</TableHead>
+                  <TableHead className="font-semibold">Comment</TableHead>
                   <TableHead className="font-semibold">Attendance</TableHead>
                   <TableHead className="font-semibold">Trend</TableHead>
                   <TableHead className="font-semibold">Status</TableHead>
@@ -693,6 +714,14 @@ export function TeacherGradesPageContent() {
                         <Badge className={getGradeColor(grade.currentGrade)}>
                           {grade.currentGrade}%
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="font-mono">
+                          {getLetterGrade(grade.currentGrade)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {getGradeComment(getLetterGrade(grade.currentGrade))}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -784,7 +813,7 @@ export function TeacherGradesPageContent() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12">
+                    <TableCell colSpan={9} className="text-center py-12">
                       <div className="flex flex-col items-center gap-2">
                         <Search className="w-12 h-12 text-muted-foreground/50" />
                         <p className="text-muted-foreground font-medium">No students found</p>
@@ -1116,6 +1145,16 @@ export function TeacherGradesPageContent() {
                               }}
                               className="w-full"
                             />
+                            {courseEdit.grade && Number(courseEdit.grade) > 0 && (
+                              <div className="flex items-center gap-2 mt-2">
+                                <Badge variant="outline" className="font-mono">
+                                  {getLetterGrade(Number(courseEdit.grade))}
+                                </Badge>
+                                <span className="text-sm text-muted-foreground">
+                                  {getGradeComment(getLetterGrade(Number(courseEdit.grade)))}
+                                </span>
+                              </div>
+                            )}
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor={`attendance-${course.id}`} className="text-sm font-medium">

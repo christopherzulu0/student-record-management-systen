@@ -232,23 +232,45 @@ export async function GET() {
           }))
         }
 
-        // Calculate semester GPA history
-        const gpaHistory = student.semesters
-          .filter((ss) => ss.semesterGPA !== null)
-          .map((ss) => ({
-            semester: ss.semester.name,
-            gpa: ss.semesterGPA || 0,
-          }))
-          .sort((a, b) => {
-            // Sort by semester name (assuming format like "Fall 2024")
-            return a.semester.localeCompare(b.semester)
+        // Calculate average from all grades (simple average of scores)
+        const gradesWithScores = canViewGrades ? grades.filter((g) => g.score > 0) : []
+        const cumulativeAverage = gradesWithScores.length > 0
+          ? Number((gradesWithScores.reduce((sum, g) => sum + g.score, 0) / gradesWithScores.length).toFixed(2))
+          : 0
+
+        // Calculate semester averages for history
+        const averageHistory: Array<{ semester: string; average: number }> = []
+        if (canViewGrades && grades.length > 0) {
+          // Group grades by semester
+          const gradesBySemester = new Map<string, number[]>()
+          grades.forEach((grade) => {
+            if (grade.score > 0) {
+              if (!gradesBySemester.has(grade.semesterName)) {
+                gradesBySemester.set(grade.semesterName, [])
+              }
+              gradesBySemester.get(grade.semesterName)!.push(grade.score)
+            }
           })
 
-        // Calculate current semester GPA (most recent)
-        const currentSemesterGPA =
-          student.semesters.length > 0 && student.semesters[0].semesterGPA
-            ? student.semesters[0].semesterGPA
-            : student.cumulativeGPA || 0
+          // Calculate average for each semester
+          gradesBySemester.forEach((scores, semesterName) => {
+            const semesterAverage = scores.length > 0
+              ? Number((scores.reduce((sum, score) => sum + score, 0) / scores.length).toFixed(2))
+              : 0
+            averageHistory.push({
+              semester: semesterName,
+              average: semesterAverage,
+            })
+          })
+
+          // Sort by semester name
+          averageHistory.sort((a, b) => a.semester.localeCompare(b.semester))
+        }
+
+        // Calculate current semester average (most recent semester with grades)
+        const currentSemesterAverage = averageHistory.length > 0
+          ? averageHistory[averageHistory.length - 1].average
+          : cumulativeAverage
 
         return {
           id: student.id,
@@ -257,8 +279,8 @@ export async function GET() {
           lastName: student.user.lastName,
           program: student.program,
           yearOfStudy: student.yearOfStudy,
-          cumulativeGPA: student.cumulativeGPA || 0,
-          semesterGPA: currentSemesterGPA,
+          average: cumulativeAverage,
+          semesterAverage: currentSemesterAverage,
           totalCreditsEarned: student.totalCreditsEarned,
           totalCreditsRequired: student.totalCreditsRequired,
           status: student.status,
@@ -275,7 +297,7 @@ export async function GET() {
           })),
           grades: canViewGrades ? grades : [],
           documents: canViewDocuments ? documents : [],
-          gpaHistory,
+          averageHistory,
           relationship: ps.relationship,
           isPrimary: ps.isPrimary,
         }

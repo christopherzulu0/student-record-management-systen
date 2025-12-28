@@ -29,6 +29,15 @@ const getGradeBadgeColor = (grade: string) => {
   return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
 }
 
+const getGradeComment = (grade: string): string => {
+  if (grade.startsWith("A")) return "Excellent"
+  if (grade.startsWith("B")) return "Very Good"
+  if (grade.startsWith("C")) return "Good"
+  if (grade.startsWith("D")) return "Passed"
+  if (grade.startsWith("F")) return "Failed"
+  return "N/A"
+}
+
 export function StudentGradesPageContent() {
   const { data } = useStudentGrades()
   const { grades, statistics, semesters, gradeProgressionData } = data
@@ -94,11 +103,11 @@ export function StudentGradesPageContent() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200">
           <CardHeader className="space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Current GPA</CardTitle>
+            <CardTitle className="text-sm font-medium">Average</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{statistics.currentGPA.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">Cumulative</p>
+            <div className="text-2xl font-bold">{statistics.average.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">All courses</p>
           </CardContent>
         </Card>
 
@@ -202,6 +211,7 @@ export function StudentGradesPageContent() {
                 <TableHead>Course Code</TableHead>
                 <TableHead>Course Name</TableHead>
                 <TableHead>Grade</TableHead>
+                <TableHead>Comment</TableHead>
                 <TableHead>Score</TableHead>
                 <TableHead>Credits</TableHead>
                 <TableHead>Semester</TableHead>
@@ -216,6 +226,7 @@ export function StudentGradesPageContent() {
                     <TableCell>
                       <Badge className={getGradeBadgeColor(grade.grade)}>{grade.grade}</Badge>
                     </TableCell>
+                    <TableCell className="text-muted-foreground">{getGradeComment(grade.grade)}</TableCell>
                     <TableCell>{grade.score > 0 ? `${grade.score}%` : 'N/A'}</TableCell>
                     <TableCell>{grade.credits}</TableCell>
                     <TableCell>{grade.semester}</TableCell>
@@ -223,7 +234,7 @@ export function StudentGradesPageContent() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12">
+                  <TableCell colSpan={7} className="text-center py-12">
                     <div className="flex flex-col items-center gap-2">
                       <p className="text-muted-foreground font-medium">No grades found</p>
                       <p className="text-sm text-muted-foreground">

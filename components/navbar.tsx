@@ -5,6 +5,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs"
 import Link from "next/link"
+import Image from "next/image"
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
@@ -14,14 +15,20 @@ export default function Navbar() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground font-bold animate-float">
-              SA
+          <Link href="/" className="flex items-center gap-2">
+            <div className="relative h-10 w-10 flex-shrink-0">
+              <Image
+                src="/logo_student-removebg-preview.png"
+                alt="School Logo"
+                fill
+                className="object-contain"
+                priority
+              />
             </div>
             <span className="text-lg font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               SARMS
             </span>
-          </div>
+          </Link>
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center gap-8">

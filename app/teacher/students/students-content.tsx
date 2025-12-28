@@ -38,6 +38,16 @@ import { useTeacherStudents, type Student, type DocumentStatus } from "@/lib/hoo
 import { useUpdateDocumentStatus } from "@/lib/hooks/use-teacher-documents"
 import { EnrollStudentDialog } from "@/components/teacher/EnrollStudentDialog"
 
+// Helper function to get grade comment
+const getGradeComment = (grade: string): string => {
+  if (grade.startsWith("A")) return "Excellent"
+  if (grade.startsWith("B")) return "Very Good"
+  if (grade.startsWith("C")) return "Good"
+  if (grade.startsWith("D")) return "Passed"
+  if (grade.startsWith("F")) return "Failed"
+  return "N/A"
+}
+
 export function MyStudentsPageContent() {
   const { data } = useTeacherStudents()
   const myStudents = data.students
@@ -63,7 +73,7 @@ export function MyStudentsPageContent() {
     )
     .sort((a, b) => {
       if (sortBy === "name") return a.name.localeCompare(b.name)
-      if (sortBy === "gpa") return b.gpa - a.gpa
+      if (sortBy === "average") return b.average - a.average
       if (sortBy === "status") return a.status.localeCompare(b.status)
       return 0
     })
@@ -182,7 +192,7 @@ export function MyStudentsPageContent() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{excellentCount}</div>
-            <p className="text-xs text-muted-foreground">GPA ≥ 3.5</p>
+            <p className="text-xs text-muted-foreground">Average ≥ 90</p>
           </CardContent>
         </Card>
 
@@ -192,7 +202,7 @@ export function MyStudentsPageContent() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{data.statistics.goodStanding}</div>
-            <p className="text-xs text-muted-foreground">3.0 - 3.5 GPA</p>
+            <p className="text-xs text-muted-foreground">70 - 89 Average</p>
           </CardContent>
         </Card>
 
@@ -205,7 +215,7 @@ export function MyStudentsPageContent() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{atRiskCount}</div>
-            <p className="text-xs text-muted-foreground">GPA {"<"} 3.0</p>
+            <p className="text-xs text-muted-foreground">Average {"<"} 70</p>
           </CardContent>
         </Card>
       </div>
@@ -244,7 +254,7 @@ export function MyStudentsPageContent() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="name">Name (A-Z)</SelectItem>
-                  <SelectItem value="gpa">GPA (High to Low)</SelectItem>
+                  <SelectItem value="average">Average (High to Low)</SelectItem>
                   <SelectItem value="status">Status</SelectItem>
                 </SelectContent>
               </Select>
@@ -290,8 +300,9 @@ export function MyStudentsPageContent() {
                   <TableHead>Student ID</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>GPA</TableHead>
-                  <TableHead>Grade</TableHead>
+                  <TableHead>Average</TableHead>
+                  <TableHead>Letter Grade</TableHead>
+                  <TableHead>Comment</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -304,15 +315,18 @@ export function MyStudentsPageContent() {
                     <TableCell className="text-sm">{student.email}</TableCell>
                     <TableCell>
                       <span
-                        className={`font-semibold ${student.gpa >= 3.5 ? "text-green-600" : student.gpa >= 3.0 ? "text-blue-600" : "text-red-600"}`}
+                        className={`font-semibold ${student.average >= 90 ? "text-green-600" : student.average >= 70 ? "text-blue-600" : "text-red-600"}`}
                       >
-                        {student.gpa.toFixed(2)}
+                        {student.average.toFixed(2)}
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100">
+                      <Badge variant="outline" className="font-mono">
                         {student.grade}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {getGradeComment(student.grade)}
                     </TableCell>
                     <TableCell>
                       <Badge className={getStatusColor(student.status)}>{student.status}</Badge>

@@ -212,57 +212,23 @@ export async function GET() {
     const semesters = Array.from(semestersMap.values())
       .sort((a, b) => b.startDate.getTime() - a.startDate.getTime())
       .map((sem) => {
-        // Calculate semester GPA
-        let totalPoints = 0
-        let totalCredits = 0
-
-        sem.courses.forEach((course) => {
-          if (course.grade !== 'N/A' && course.grade !== 'F') {
-            const gpaPoints = getGPAPoints(course.grade)
-            totalPoints += gpaPoints * course.credits
-            totalCredits += course.credits
-          }
-        })
-
-        const semesterGPA = totalCredits > 0 ? Number((totalPoints / totalCredits).toFixed(2)) : 0
+        // Calculate semester Average (simple average of all scores)
+        const coursesWithScores = sem.courses.filter((c) => c.score > 0)
+        const semesterAverage = coursesWithScores.length > 0
+          ? Number((coursesWithScores.reduce((sum, c) => sum + c.score, 0) / coursesWithScores.length).toFixed(2))
+          : 0
 
         return {
           semester: sem.semester,
-          gpa: semesterGPA,
+          average: semesterAverage,
           courses: sem.courses,
         }
       })
 
-    // Calculate cumulative GPA from all grades
-    let cumulativeTotalPoints = 0
-    let cumulativeTotalCredits = 0
-
-    grades.forEach((grade) => {
-      let letterGrade: string | null = null
-      if (grade.letterGrade) {
-        const enumValue = grade.letterGrade
-        letterGrade = enumValue
-          .replace(/_PLUS/g, '+')
-          .replace(/_MINUS/g, '-')
-      } else {
-        letterGrade = getLetterGrade(grade.score)
-      }
-
-      // Find course credits
-      const enrollment = enrollments.find(
-        (e) => e.courseId === grade.courseId && e.semesterId === grade.semesterId
-      )
-      const credits = enrollment?.course.credits || grade.course.credits
-
-      if (letterGrade !== 'F') {
-        const gpaPoints = getGPAPoints(letterGrade)
-        cumulativeTotalPoints += gpaPoints * credits
-        cumulativeTotalCredits += credits
-      }
-    })
-
-    const cumulativeGPA = cumulativeTotalCredits > 0 
-      ? Number((cumulativeTotalPoints / cumulativeTotalCredits).toFixed(2))
+    // Calculate cumulative Average (simple average of all scores)
+    const gradesWithScores = grades.filter((g) => g.score > 0)
+    const cumulativeAverage = gradesWithScores.length > 0
+      ? Number((gradesWithScores.reduce((sum, g) => sum + g.score, 0) / gradesWithScores.length).toFixed(2))
       : (student.cumulativeGPA || 0)
 
     // Calculate total credits earned (excluding F grades)
@@ -287,13 +253,13 @@ export async function GET() {
       }
     })
 
-    // Determine academic standing
+    // Determine academic standing based on average
     let academicStanding = 'Good Standing'
-    if (cumulativeGPA >= 3.5) {
+    if (cumulativeAverage >= 90) {
       academicStanding = 'Excellent'
-    } else if (cumulativeGPA < 2.0) {
+    } else if (cumulativeAverage < 60) {
       academicStanding = 'Academic Probation'
-    } else if (cumulativeGPA < 2.5) {
+    } else if (cumulativeAverage < 70) {
       academicStanding = 'At Risk'
     }
 
@@ -302,7 +268,7 @@ export async function GET() {
       studentId: student.studentId,
       email: user.email,
       enrollmentDate: student.enrollmentDate.toISOString().split('T')[0],
-      cumulativeGPA,
+      average: cumulativeAverage,
       totalCreditsEarned: totalCreditsEarned || student.totalCreditsEarned,
       totalCreditsRequired: student.totalCreditsRequired,
       academicStanding,

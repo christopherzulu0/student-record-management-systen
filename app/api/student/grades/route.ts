@@ -175,23 +175,20 @@ export async function GET() {
     // Calculate statistics
     const gradesWithScores = formattedGrades.filter((g) => g.score > 0)
     
-    // Calculate GPA (weighted by credits)
-    let totalPoints = 0
-    let totalCredits = 0
-    let creditsEarned = 0
+    // Calculate Average (simple average of all scores)
+    const average = gradesWithScores.length > 0
+      ? Number((gradesWithScores.reduce((sum, g) => sum + g.score, 0) / gradesWithScores.length).toFixed(2))
+      : 0
     
+    // Calculate credits earned
+    let creditsEarned = 0
     gradesWithScores.forEach((grade) => {
-      const gpaPoints = getGPAPoints(grade.grade)
-      totalPoints += gpaPoints * grade.credits
-      totalCredits += grade.credits
       if (grade.grade !== 'F') {
         creditsEarned += grade.credits
       }
     })
     
-    const currentGPA = totalCredits > 0 ? Number((totalPoints / totalCredits).toFixed(2)) : 0
-    
-    // Calculate average grade
+    // Calculate average grade (letter grade)
     const avgScore = gradesWithScores.length > 0
       ? Math.round(gradesWithScores.reduce((sum, g) => sum + g.score, 0) / gradesWithScores.length)
       : 0
@@ -269,7 +266,7 @@ export async function GET() {
     return NextResponse.json({
       grades: formattedGrades,
       statistics: {
-        currentGPA,
+        average,
         creditsEarned,
         totalCreditsRequired: 60, // Default, can be updated from student record
         averageGrade,

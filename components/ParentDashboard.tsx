@@ -168,12 +168,12 @@ function ParentDashboardContent() {
         </div>
 
         <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {/* GPA Card */}
+          {/* Average Card */}
           <Card className="border-border/50 transition-all hover:border-primary/30 hover:shadow-md">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Cumulative GPA
+                  Average
                 </CardTitle>
                 <div className="rounded-md bg-primary/10 p-1.5">
                   <GraduationCap className="h-4 w-4 text-primary" />
@@ -184,22 +184,22 @@ function ParentDashboardContent() {
             <CardContent className="space-y-2">
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-bold tracking-tight">
-                  {selectedStudent.cumulativeGPA.toFixed(2)}
+                  {(selectedStudent.average ?? 0).toFixed(2)}
                 </span>
-                <span className="text-base font-medium text-muted-foreground">/ 4.0</span>
+                <span className="text-base font-medium text-muted-foreground">/ 100</span>
               </div>
 
               <div className="flex items-center gap-1.5">
                 <Badge variant="outline" className="border-accent/30 bg-accent/10 text-xs text-accent px-2 py-0">
                   <TrendingUp className="mr-1 h-3 w-3" />
-                  {selectedStudent.semesterGPA.toFixed(2)}
+                  {(selectedStudent.semesterAverage ?? 0).toFixed(2)}
                 </Badge>
                 <span className="text-xs text-muted-foreground">this semester</span>
               </div>
 
-              {selectedStudent.gpaHistory.length > 0 && (
+              {selectedStudent.averageHistory && selectedStudent.averageHistory.length > 0 && (
                 <div className="h-12 w-full">
-                  <MiniChart data={selectedStudent.gpaHistory} />
+                  <MiniChart data={selectedStudent.averageHistory} />
                 </div>
               )}
             </CardContent>
@@ -687,11 +687,19 @@ function getTrendIcon(trend: string) {
   }
 }
 
-function MiniChart({ data }: { data: { semester: string; gpa: number }[] }) {
-  const max = 4.0
+function MiniChart({ data }: { data: { semester: string; average: number }[] }) {
+  const max = 100
+  
+  // Handle edge cases: empty data or single data point
+  if (data.length === 0) {
+    return null
+  }
+  
   const points = data.map((d, i) => {
-    const x = (i / (data.length - 1)) * 100
-    const y = 100 - (d.gpa / max) * 100
+    // Handle division by zero when there's only one data point
+    const x = data.length === 1 ? 50 : (i / (data.length - 1)) * 100
+    const average = d.average ?? 0
+    const y = 100 - (average / max) * 100
     return `${x},${y}`
   })
 
@@ -712,8 +720,10 @@ function MiniChart({ data }: { data: { semester: string; gpa: number }[] }) {
       />
       <polyline fill="url(#chartGradient)" points={`0,100 ${points.join(" ")} 100,100`} />
       {data.map((d, i) => {
-        const x = (i / (data.length - 1)) * 100
-        const y = 100 - (d.gpa / max) * 100
+        // Handle division by zero when there's only one data point
+        const x = data.length === 1 ? 50 : (i / (data.length - 1)) * 100
+        const average = d.average ?? 0
+        const y = 100 - (average / max) * 100
         return <circle key={i} cx={x} cy={y} r="2" fill="rgb(var(--color-primary))" vectorEffect="non-scaling-stroke" />
       })}
     </svg>

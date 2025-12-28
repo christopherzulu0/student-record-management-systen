@@ -4,6 +4,16 @@ import type { Child } from "@/lib/hooks/use-parent-dashboard"
 import type { StudentGrade, StudentGradesStatistics } from "@/lib/hooks/use-student-grades"
 import type { StudentTranscriptResponse } from "@/lib/hooks/use-student-transcript"
 
+// Helper function to get grade comment
+const getGradeComment = (grade: string): string => {
+  if (grade.startsWith("A")) return "Excellent"
+  if (grade.startsWith("B")) return "Very Good"
+  if (grade.startsWith("C")) return "Good"
+  if (grade.startsWith("D")) return "Passed"
+  if (grade.startsWith("F")) return "Failed"
+  return "N/A"
+}
+
 interface GenerateGradesPDFOptions {
   student: Child
   selectedSemesterName?: string
@@ -96,8 +106,8 @@ export async function generateGradesPDF({
     [`Student ID:`, student.studentId],
     [`Program:`, student.program || "N/A"],
     [`Year of Study:`, student.yearOfStudy?.toString() || "N/A"],
-    [`Cumulative GPA:`, student.cumulativeGPA.toFixed(2)],
-    [`Semester GPA:`, student.semesterGPA.toFixed(2)],
+    [`Average:`, student.average.toFixed(2)],
+    [`Semester Average:`, student.semesterAverage.toFixed(2)],
     [`Credits Earned:`, `${student.totalCreditsEarned} / ${student.totalCreditsRequired}`],
     [`Status:`, student.status],
   ]
@@ -137,13 +147,14 @@ export async function generateGradesPDF({
       grade.courseName,
       `${grade.score}%`,
       grade.letterGrade,
+      getGradeComment(grade.letterGrade),
       grade.attendance !== null ? `${grade.attendance}%` : "N/A",
       `${grade.completed}/${grade.assignments}`,
     ])
 
     autoTable(doc, {
       startY: yPos,
-      head: [["Course Code", "Course Name", "Score", "Grade", "Attendance", "Assignments"]],
+      head: [["Course Code", "Course Name", "Score", "Grade", "Comment", "Attendance", "Assignments"]],
       body: tableData,
       theme: "striped",
       headStyles: {
@@ -164,12 +175,13 @@ export async function generateGradesPDF({
         cellPadding: 3,
       },
       columnStyles: {
-        0: { cellWidth: 25 }, // Course Code
-        1: { cellWidth: 60 }, // Course Name
-        2: { cellWidth: 20 }, // Score
-        3: { cellWidth: 20 }, // Grade
-        4: { cellWidth: 25 }, // Attendance
-        5: { cellWidth: 25 }, // Assignments
+        0: { cellWidth: 22 }, // Course Code
+        1: { cellWidth: 50 }, // Course Name
+        2: { cellWidth: 18 }, // Score
+        3: { cellWidth: 18 }, // Grade
+        4: { cellWidth: 25 }, // Comment
+        5: { cellWidth: 22 }, // Attendance
+        6: { cellWidth: 22 }, // Assignments
       },
     })
 

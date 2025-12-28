@@ -102,7 +102,7 @@ export function ParentsPageContent() {
       if (sortBy === "name") {
         return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`)
       }
-      if (sortBy === "gpa") return (b.cumulativeGPA || 0) - (a.cumulativeGPA || 0)
+      if (sortBy === "average") return (b.average || 0) - (a.average || 0)
       if (sortBy === "parents") return b.parents.length - a.parents.length
       return 0
     })
@@ -224,7 +224,7 @@ export function ParentsPageContent() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Total Students</CardTitle>
@@ -258,6 +258,26 @@ export function ParentsPageContent() {
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">{data.statistics.withoutParents}</div>
             <p className="text-xs text-muted-foreground">Need parent links</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-blue-200 dark:border-blue-800">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-300 flex items-center gap-1">
+              <GraduationCap className="w-4 h-4" />
+              Overall Average
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">
+              {(() => {
+                const studentsWithAverage = students.filter(s => s.average !== undefined && s.average !== null && s.average > 0)
+                if (studentsWithAverage.length === 0) return "N/A"
+                const totalAverage = studentsWithAverage.reduce((sum, s) => sum + (s.average || 0), 0)
+                return (totalAverage / studentsWithAverage.length).toFixed(2)
+              })()}
+            </div>
+            <p className="text-xs text-muted-foreground">All students average</p>
           </CardContent>
         </Card>
       </div>
@@ -296,7 +316,7 @@ export function ParentsPageContent() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="name">Name (A-Z)</SelectItem>
-                  <SelectItem value="gpa">GPA (High to Low)</SelectItem>
+                  <SelectItem value="average">Average (High to Low)</SelectItem>
                   <SelectItem value="parents">Parents Count</SelectItem>
                 </SelectContent>
               </Select>
@@ -342,7 +362,7 @@ export function ParentsPageContent() {
                   <TableHead>Student ID</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>GPA</TableHead>
+                  <TableHead>Average</TableHead>
                   <TableHead>Parents</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
@@ -373,7 +393,7 @@ export function ParentsPageContent() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="font-mono">
-                          {student.cumulativeGPA?.toFixed(2) || "N/A"}
+                          {student.average?.toFixed(2) || "N/A"}
                         </Badge>
                       </TableCell>
                       <TableCell>

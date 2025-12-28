@@ -3,6 +3,16 @@ import autoTable from "jspdf-autotable"
 import type { StudentGrade, StudentGradesStatistics } from "@/lib/hooks/use-student-grades"
 import type { StudentTranscriptResponse } from "@/lib/hooks/use-student-transcript"
 
+// Helper function to get grade comment
+const getGradeComment = (grade: string): string => {
+  if (grade.startsWith("A")) return "Excellent"
+  if (grade.startsWith("B")) return "Very Good"
+  if (grade.startsWith("C")) return "Good"
+  if (grade.startsWith("D")) return "Passed"
+  if (grade.startsWith("F")) return "Failed"
+  return "N/A"
+}
+
 // Helper function to load and add logo
 async function addLogoToPDF(doc: jsPDF, topMargin: number): Promise<number> {
   let logoHeight = 0
@@ -38,7 +48,7 @@ async function addLogoToPDF(doc: jsPDF, topMargin: number): Promise<number> {
 
 interface GenerateStudentGradesPDFOptions {
   grades: StudentGrade[]
-  statistics: StudentGradesStatistics
+  statistics: { average: number; creditsEarned: number; totalCreditsRequired: number; averageGrade: string }
   selectedSemester?: string
 }
 
@@ -94,7 +104,7 @@ export async function generateStudentGradesPDF({
   doc.setFontSize(9)
 
   const statsInfo = [
-    [`Current GPA:`, statistics.currentGPA.toFixed(2)],
+    [`Average:`, statistics.average.toFixed(2)],
     [`Credits Earned:`, `${statistics.creditsEarned} / ${statistics.totalCreditsRequired}`],
     [`Average Grade:`, statistics.averageGrade],
   ]
@@ -133,6 +143,7 @@ export async function generateStudentGradesPDF({
       grade.courseCode,
       grade.courseName,
       grade.grade,
+      getGradeComment(grade.grade),
       `${grade.score}%`,
       grade.credits.toString(),
       grade.semester,
@@ -140,7 +151,7 @@ export async function generateStudentGradesPDF({
 
     autoTable(doc, {
       startY: yPos,
-      head: [["Course Code", "Course Name", "Grade", "Score", "Credits", "Semester"]],
+      head: [["Course Code", "Course Name", "Grade", "Comment", "Score", "Credits", "Semester"]],
       body: tableData,
       theme: "striped",
       headStyles: {
@@ -161,12 +172,13 @@ export async function generateStudentGradesPDF({
         cellPadding: 3,
       },
       columnStyles: {
-        0: { cellWidth: 25 }, // Course Code
-        1: { cellWidth: 60 }, // Course Name
-        2: { cellWidth: 20 }, // Grade
-        3: { cellWidth: 20 }, // Score
-        4: { cellWidth: 20 }, // Credits
-        5: { cellWidth: 30 }, // Semester
+        0: { cellWidth: 22 }, // Course Code
+        1: { cellWidth: 50 }, // Course Name
+        2: { cellWidth: 18 }, // Grade
+        3: { cellWidth: 25 }, // Comment
+        4: { cellWidth: 18 }, // Score
+        5: { cellWidth: 18 }, // Credits
+        6: { cellWidth: 25 }, // Semester
       },
     })
   }
@@ -252,7 +264,7 @@ export async function generateStudentTranscriptPDF(data: StudentTranscriptRespon
     [`Student ID:`, data.studentId],
     [`Email:`, data.email],
     [`Enrollment Date:`, new Date(data.enrollmentDate).toLocaleDateString("en-US")],
-    [`Cumulative GPA:`, data.cumulativeGPA.toFixed(2)],
+    [`Average:`, data.average.toFixed(2)],
     [`Credits Earned:`, `${data.totalCreditsEarned} / ${data.totalCreditsRequired}`],
     [`Academic Standing:`, data.academicStanding],
   ]
@@ -285,7 +297,7 @@ export async function generateStudentTranscriptPDF(data: StudentTranscriptRespon
     // Semester header
     doc.setFontSize(11)
     doc.setFont("helvetica", "bold")
-    doc.text(`${semester.semester} - GPA: ${semester.gpa.toFixed(2)}`, margin, yPos)
+    doc.text(`${semester.semester} - Average: ${semester.average.toFixed(2)}`, margin, yPos)
     yPos += 6
 
     // Semester courses table
@@ -294,12 +306,13 @@ export async function generateStudentTranscriptPDF(data: StudentTranscriptRespon
       course.name,
       course.credits.toString(),
       course.grade,
+      getGradeComment(course.grade),
       course.score > 0 ? `${course.score}%` : "N/A",
     ])
 
     autoTable(doc, {
       startY: yPos,
-      head: [["Course Code", "Course Name", "Credits", "Grade", "Score"]],
+      head: [["Course Code", "Course Name", "Credits", "Grade", "Comment", "Score"]],
       body: tableData,
       theme: "striped",
       headStyles: {
@@ -320,11 +333,12 @@ export async function generateStudentTranscriptPDF(data: StudentTranscriptRespon
         cellPadding: 3,
       },
       columnStyles: {
-        0: { cellWidth: 30 }, // Course Code
-        1: { cellWidth: 70 }, // Course Name
-        2: { cellWidth: 20 }, // Credits
-        3: { cellWidth: 20 }, // Grade
-        4: { cellWidth: 20 }, // Score
+        0: { cellWidth: 28 }, // Course Code
+        1: { cellWidth: 60 }, // Course Name
+        2: { cellWidth: 18 }, // Credits
+        3: { cellWidth: 18 }, // Grade
+        4: { cellWidth: 25 }, // Comment
+        5: { cellWidth: 18 }, // Score
       },
     })
 
