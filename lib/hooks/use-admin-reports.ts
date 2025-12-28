@@ -4,7 +4,7 @@ import { useSuspenseQuery } from "@tanstack/react-query"
 
 export interface SemesterTrend {
   semester: string
-  avgGPA: number
+  avgAverage: number
   enrolled: number
   graduated: number
 }
@@ -12,20 +12,20 @@ export interface SemesterTrend {
 export interface DepartmentStat {
   dept: string
   students: number
-  avgGPA: number
+  avgAverage: number
   passRate: number
 }
 
 export interface AtRiskStudent {
   id: string
   name: string
-  gpa: number
+  average: number
   status: "At Risk" | "Critical"
 }
 
 export interface AdminReportsData {
   overview: {
-    systemGPA: number
+    systemAverage: number
     passRate: number
     graduationRate: number
     atRiskCount: number

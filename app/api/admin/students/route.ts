@@ -31,7 +31,7 @@ export async function GET() {
       )
     }
 
-    // Fetch all students with their user information
+    // Fetch all students with their user information and grades
     const students = await prisma.student.findMany({
       include: {
         user: {
@@ -40,6 +40,11 @@ export async function GET() {
             firstName: true,
             lastName: true,
             email: true,
+          },
+        },
+        grades: {
+          select: {
+            score: true,
           },
         },
       },
@@ -58,12 +63,18 @@ export async function GET() {
         'inactive': 'inactive',
       }
 
+      // Calculate average from grades (simple average: sum of scores / number of courses)
+      const gradesWithScores = student.grades.filter((g) => g.score !== null && g.score !== undefined)
+      const average = gradesWithScores.length > 0
+        ? Number((gradesWithScores.reduce((sum, g) => sum + (g.score || 0), 0) / gradesWithScores.length).toFixed(2))
+        : 0
+
       return {
         id: student.studentId,
         studentModelId: student.id,
         name: `${student.user.firstName} ${student.user.lastName || ''}`.trim() || student.user.email,
         email: student.user.email,
-        gpa: student.cumulativeGPA || 0,
+        average,
         enrolled: student.enrollmentDate.toISOString(),
         status: statusMap[student.status] || 'active',
         credits: student.totalCreditsEarned || 0,
@@ -74,10 +85,10 @@ export async function GET() {
     const total = formattedStudents.length
     const active = formattedStudents.filter((s) => s.status === 'active').length
     const atRisk = formattedStudents.filter((s) => s.status === 'at-risk').length
-    const studentsWithGPA = formattedStudents.filter((s) => s.gpa > 0)
-    const avgGPA =
-      studentsWithGPA.length > 0
-        ? studentsWithGPA.reduce((sum, s) => sum + s.gpa, 0) / studentsWithGPA.length
+    const studentsWithAverage = formattedStudents.filter((s) => s.average > 0)
+    const avgAverage =
+      studentsWithAverage.length > 0
+        ? studentsWithAverage.reduce((sum, s) => sum + s.average, 0) / studentsWithAverage.length
         : 0
 
     return NextResponse.json({
@@ -86,7 +97,7 @@ export async function GET() {
         total,
         active,
         atRisk,
-        avgGPA: Number(avgGPA.toFixed(2)),
+        avgAverage: Number(avgAverage.toFixed(2)),
       },
     })
   } catch (error) {

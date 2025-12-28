@@ -7,7 +7,7 @@ export interface AdminStudent {
   studentModelId: string
   name: string
   email: string
-  gpa: number
+  average: number
   enrolled: string
   status: "active" | "at-risk" | "suspended" | "inactive"
   credits: number
@@ -17,7 +17,7 @@ export interface AdminStudentsStatistics {
   total: number
   active: number
   atRisk: number
-  avgGPA: number
+  avgAverage: number
 }
 
 export interface AdminStudentsResponse {

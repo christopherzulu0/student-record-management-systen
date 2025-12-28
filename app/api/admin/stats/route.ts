@@ -36,7 +36,7 @@ export async function GET() {
       totalStudents,
       totalTeachers,
       totalCourses,
-      studentsWithGPA,
+      allGrades,
       atRiskStudents,
       studentsThisMonth,
     ] = await Promise.all([
@@ -58,15 +58,10 @@ export async function GET() {
           status: 'active',
         },
       }),
-      // Students with GPA for average calculation
-      prisma.student.findMany({
-        where: {
-          cumulativeGPA: {
-            not: null,
-          },
-        },
+      // All grades for average calculation (simple average of scores)
+      prisma.grade.findMany({
         select: {
-          cumulativeGPA: true,
+          score: true,
         },
       }),
       // At risk students count
@@ -85,21 +80,21 @@ export async function GET() {
       }),
     ])
 
-    // Calculate average GPA
-    const gpaValues = studentsWithGPA
-      .map((s) => s.cumulativeGPA)
-      .filter((gpa): gpa is number => gpa !== null && !isNaN(gpa))
+    // Calculate average from all grades (simple average: sum of scores / number of grades)
+    const scores = allGrades
+      .map((g) => g.score)
+      .filter((score): score is number => score !== null && !isNaN(score))
 
-    const averageGPA =
-      gpaValues.length > 0
-        ? gpaValues.reduce((sum, gpa) => sum + gpa, 0) / gpaValues.length
+    const averageAverage =
+      scores.length > 0
+        ? scores.reduce((sum, score) => sum + score, 0) / scores.length
         : 0
 
     return NextResponse.json({
       totalStudents,
       totalTeachers,
       totalCourses,
-      averageGPA: Math.round(averageGPA * 100) / 100, // Round to 2 decimal places
+      averageAverage: Math.round(averageAverage * 100) / 100, // Round to 2 decimal places
       atRiskStudents,
       studentsAddedThisMonth: studentsThisMonth,
     })

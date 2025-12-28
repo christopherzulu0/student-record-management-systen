@@ -6,7 +6,7 @@ export interface AdminStats {
   totalStudents: number
   totalTeachers: number
   totalCourses: number
-  averageGPA: number
+  averageAverage: number
   atRiskStudents: number
   studentsAddedThisMonth: number
 }

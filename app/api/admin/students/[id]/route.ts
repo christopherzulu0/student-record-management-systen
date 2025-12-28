@@ -85,6 +85,12 @@ export async function GET(
       )
     }
 
+    // Calculate average from grades (simple average: sum of scores / number of courses)
+    const gradesWithScores = student.grades.filter((g) => g.score !== null && g.score !== undefined)
+    const average = gradesWithScores.length > 0
+      ? Number((gradesWithScores.reduce((sum, g) => sum + (g.score || 0), 0) / gradesWithScores.length).toFixed(2))
+      : 0
+
     // Format response
     return NextResponse.json({
       student: {
@@ -100,7 +106,7 @@ export async function GET(
         state: student.user.state,
         zipCode: student.user.zipCode,
         country: student.user.country,
-        gpa: student.cumulativeGPA || 0,
+        average,
         credits: student.totalCreditsEarned || 0,
         status: student.status,
         program: student.program,
@@ -197,8 +203,11 @@ export async function PUT(
       studentUpdateData.status = statusMap[body.status] || 'active'
     }
 
-    if (body.gpa !== undefined && body.gpa !== null) {
-      studentUpdateData.cumulativeGPA = parseFloat(body.gpa)
+    // Note: Average is calculated from grades, so we don't update it directly
+    // If needed, this could be removed or kept for backward compatibility
+    if (body.average !== undefined && body.average !== null) {
+      // Average is calculated from grades, not stored directly
+      // This field is kept for potential future use
     }
 
     if (body.credits !== undefined && body.credits !== null) {

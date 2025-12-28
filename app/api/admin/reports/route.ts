@@ -138,12 +138,11 @@ export async function GET() {
       }),
     ])
 
-    // Calculate overview statistics
-    const studentsWithGPA = allStudents.filter((s) => s.cumulativeGPA !== null && s.cumulativeGPA > 0)
-    const avgGPA =
-      studentsWithGPA.length > 0
-        ? studentsWithGPA.reduce((sum, s) => sum + (s.cumulativeGPA || 0), 0) / studentsWithGPA.length
-        : 0
+    // Calculate overview statistics - average from all grades
+    const allGradeScores = allGrades.filter((g) => g.score !== null && g.score !== undefined).map((g) => g.score || 0)
+    const systemAverage = allGradeScores.length > 0
+      ? allGradeScores.reduce((sum, score) => sum + score, 0) / allGradeScores.length
+      : 0
 
     // Calculate pass rate (grades >= 60 or letter grade >= D)
     const passingGrades = allGrades.filter((g) => {
@@ -174,25 +173,17 @@ export async function GET() {
       // Get grades for this semester
       const semesterGrades = allGrades.filter((g) => g.semesterId === semester.id)
 
-      // Calculate average GPA for this semester
-      let semesterGPA = 0
-      if (semesterGrades.length > 0) {
-        let totalPoints = 0
-        let totalCredits = 0
-        semesterGrades.forEach((grade) => {
-          if (grade.letterGrade) {
-            const gpaPoints = getGPAPoints(grade.letterGrade)
-            const credits = grade.course?.credits || 0
-            totalPoints += gpaPoints * credits
-            totalCredits += credits
-          }
-        })
-        semesterGPA = totalCredits > 0 ? totalPoints / totalCredits : 0
-      }
+      // Calculate average for this semester (simple average of scores)
+      const semesterScores = semesterGrades
+        .filter((g) => g.score !== null && g.score !== undefined)
+        .map((g) => g.score || 0)
+      const semesterAverage = semesterScores.length > 0
+        ? semesterScores.reduce((sum, score) => sum + score, 0) / semesterScores.length
+        : 0
 
       return {
         semester: semester.name,
-        avgGPA: Number(semesterGPA.toFixed(2)),
+        avgAverage: Number(semesterAverage.toFixed(2)),
         enrolled: semesterEnrollments.length,
         graduated: 0, // This would require tracking graduation dates
       }
@@ -213,12 +204,13 @@ export async function GET() {
         g.course?.department === dept.name
       )
 
-      // Calculate average GPA for department
-      const deptStudentsWithGPA = deptStudents.filter((s) => s.cumulativeGPA !== null && s.cumulativeGPA > 0)
-      const deptAvgGPA =
-        deptStudentsWithGPA.length > 0
-          ? deptStudentsWithGPA.reduce((sum, s) => sum + (s.cumulativeGPA || 0), 0) / deptStudentsWithGPA.length
-          : 0
+      // Calculate average for department (simple average of scores)
+      const deptScores = deptGrades
+        .filter((g) => g.score !== null && g.score !== undefined)
+        .map((g) => g.score || 0)
+      const deptAvgAverage = deptScores.length > 0
+        ? deptScores.reduce((sum, score) => sum + score, 0) / deptScores.length
+        : 0
 
       // Calculate pass rate for department
       const deptPassingGrades = deptGrades.filter((g) => {
@@ -236,25 +228,45 @@ export async function GET() {
       return {
         dept: dept.name,
         students: deptStudents.length,
-        avgGPA: Number(deptAvgGPA.toFixed(2)),
+        avgAverage: Number(deptAvgAverage.toFixed(2)),
         passRate: Math.round(deptPassRate),
       }
     })
 
-    // Format at-risk students
+    // Format at-risk students - calculate average from their grades
+    // Get all grades for at-risk students in one query
+    const atRiskStudentIds = atRiskStudentsList.map((s) => s.id)
+    const atRiskGrades = await prisma.grade.findMany({
+      where: { studentId: { in: atRiskStudentIds } },
+      select: { studentId: true, score: true },
+    })
+    
+    // Group grades by student and calculate average
+    const gradesByStudent = new Map<string, number[]>()
+    atRiskGrades.forEach((grade) => {
+      if (grade.score !== null && grade.score !== undefined) {
+        const existing = gradesByStudent.get(grade.studentId) || []
+        existing.push(grade.score)
+        gradesByStudent.set(grade.studentId, existing)
+      }
+    })
+    
     const formattedAtRiskStudents = atRiskStudentsList.map((student) => {
-      const gpa = student.cumulativeGPA || 0
+      const scores = gradesByStudent.get(student.id) || []
+      const average = scores.length > 0
+        ? scores.reduce((sum, score) => sum + score, 0) / scores.length
+        : 0
       return {
         id: student.studentId,
         name: `${student.user.firstName} ${student.user.lastName || ''}`.trim() || 'Unknown',
-        gpa: Number(gpa.toFixed(2)),
-        status: gpa < 2.0 ? 'Critical' : 'At Risk',
+        average: Number(average.toFixed(2)),
+        status: average < 70 ? 'Critical' : 'At Risk',
       }
     })
 
     return NextResponse.json({
       overview: {
-        systemGPA: Number(avgGPA.toFixed(2)),
+        systemAverage: Number(systemAverage.toFixed(2)),
         passRate: Math.round(passRate),
         graduationRate: Math.round(graduationRate),
         atRiskCount: atRiskStudentsList.length,

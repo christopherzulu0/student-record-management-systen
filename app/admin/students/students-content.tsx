@@ -55,6 +55,25 @@ import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
+// Helper function to convert score to letter grade (matches API grading)
+const getLetterGrade = (score: number): string => {
+  if (score >= 90) return 'A'
+  if (score >= 80) return 'B'
+  if (score >= 70) return 'C'
+  if (score >= 60) return 'D'
+  return 'F'
+}
+
+// Helper function to get grade comment
+const getGradeComment = (grade: string): string => {
+  if (grade.startsWith("A")) return "Excellent"
+  if (grade.startsWith("B")) return "Very Good"
+  if (grade.startsWith("C")) return "Good"
+  if (grade.startsWith("D")) return "Passed"
+  if (grade.startsWith("F")) return "Failed"
+  return "N/A"
+}
+
 export function AdminStudentsContent() {
   const { data } = useAdminStudents()
   const queryClient = useQueryClient()
@@ -76,7 +95,6 @@ export function AdminStudentsContent() {
   // Edit form state
   const [editFormData, setEditFormData] = useState({
     status: "",
-    gpa: "",
     credits: "",
   })
   const [isSaving, setIsSaving] = useState(false)
@@ -101,10 +119,10 @@ export function AdminStudentsContent() {
     }
   }
 
-  const getGPAColor = (gpa: number) => {
-    if (gpa >= 3.7) return "text-emerald-600 dark:text-emerald-400"
-    if (gpa >= 3.0) return "text-blue-600 dark:text-blue-400"
-    if (gpa >= 2.5) return "text-orange-600 dark:text-orange-400"
+  const getAverageColor = (average: number) => {
+    if (average >= 90) return "text-emerald-600 dark:text-emerald-400"
+    if (average >= 70) return "text-blue-600 dark:text-blue-400"
+    if (average >= 60) return "text-orange-600 dark:text-orange-400"
     return "text-red-600 dark:text-red-400"
   }
 
@@ -115,13 +133,17 @@ export function AdminStudentsContent() {
     }
 
     // Prepare CSV data
-    const headers = ["Student ID", "Name", "Email", "GPA", "Credits", "Status", "Enrolled Date"]
+    const headers = ["Student ID", "Name", "Email", "Average", "Letter Grade", "Comment", "Credits", "Status", "Enrolled Date"]
     const rows = filteredStudents.map((student) => {
+      const letterGrade = getLetterGrade(Math.round(student.average))
+      const comment = getGradeComment(letterGrade)
       return [
         student.id,
         student.name,
         student.email,
-        student.gpa.toFixed(2),
+        student.average.toFixed(2),
+        letterGrade,
+        comment,
         student.credits.toString(),
         student.status,
         new Date(student.enrolled).toLocaleDateString(),
@@ -140,7 +162,7 @@ export function AdminStudentsContent() {
       `Total Students: ${filteredStudents.length}`,
       `Active: ${data.statistics.active}`,
       `At Risk: ${data.statistics.atRisk}`,
-      `Average GPA: ${data.statistics.avgGPA}`,
+      `Average: ${data.statistics.avgAverage.toFixed(2)}`,
       "",
     ]
 
@@ -196,7 +218,6 @@ export function AdminStudentsContent() {
     setEditingStudent(student)
     setEditFormData({
       status: student.status,
-      gpa: student.gpa.toString(),
       credits: student.credits.toString(),
     })
 
@@ -209,7 +230,6 @@ export function AdminStudentsContent() {
       setStudentDetails(data.student)
       setEditFormData({
         status: data.student.status === "at_risk" ? "at-risk" : data.student.status,
-        gpa: data.student.gpa.toString(),
         credits: data.student.credits.toString(),
       })
     } catch (error) {
@@ -232,7 +252,6 @@ export function AdminStudentsContent() {
         },
         body: JSON.stringify({
           status: editFormData.status,
-          gpa: Number.parseFloat(editFormData.gpa) || 0,
           credits: Number.parseInt(editFormData.credits, 10) || 0,
         }),
       })
@@ -245,7 +264,7 @@ export function AdminStudentsContent() {
       toast.success("Student updated successfully")
       queryClient.invalidateQueries({ queryKey: ["admin-students"] })
       setEditingStudent(null)
-      setEditFormData({ status: "", gpa: "", credits: "" })
+      setEditFormData({ status: "", credits: "" })
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update student")
     } finally {
@@ -437,7 +456,7 @@ export function AdminStudentsContent() {
               <div className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-red-600 dark:from-orange-400 dark:to-red-400 bg-clip-text text-transparent">
                 {data.statistics.atRisk}
               </div>
-              <p className="text-sm text-orange-700 dark:text-orange-400 mt-2 font-medium">GPA below 2.5</p>
+              <p className="text-sm text-orange-700 dark:text-orange-400 mt-2 font-medium">Average below 70</p>
             </CardContent>
           </Card>
 
@@ -446,7 +465,7 @@ export function AdminStudentsContent() {
             <CardHeader className="pb-3 relative">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                  Average GPA
+                  Average
                 </CardTitle>
                 <div className="p-2 rounded-lg bg-purple-500/10">
                   <BarChart3 className="w-5 h-5 text-purple-600 dark:text-purple-400" />
@@ -455,7 +474,7 @@ export function AdminStudentsContent() {
             </CardHeader>
             <CardContent className="relative">
               <div className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
-                {data.statistics.avgGPA}
+                {data.statistics.avgAverage.toFixed(2)}
               </div>
               <p className="text-sm text-purple-700 dark:text-purple-400 mt-2 font-medium">System-wide average</p>
             </CardContent>
@@ -530,7 +549,9 @@ export function AdminStudentsContent() {
                     <TableHead className="font-semibold">Student ID</TableHead>
                     <TableHead className="font-semibold">Name</TableHead>
                     <TableHead className="font-semibold">Email</TableHead>
-                    <TableHead className="font-semibold">GPA</TableHead>
+                    <TableHead className="font-semibold">Average</TableHead>
+                    <TableHead className="font-semibold">Letter Grade</TableHead>
+                    <TableHead className="font-semibold">Comment</TableHead>
                     <TableHead className="font-semibold">Credits</TableHead>
                     <TableHead className="font-semibold">Status</TableHead>
                     <TableHead className="font-semibold">Enrolled</TableHead>
@@ -565,9 +586,17 @@ export function AdminStudentsContent() {
                         <TableCell className="font-semibold">{student.name}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{student.email}</TableCell>
                         <TableCell>
-                          <span className={`font-bold text-lg ${getGPAColor(student.gpa)}`}>
-                            {student.gpa.toFixed(2)}
+                          <span className={`font-bold text-lg ${getAverageColor(student.average)}`}>
+                            {student.average.toFixed(2)}
                           </span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="font-mono">
+                            {getLetterGrade(Math.round(student.average))}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {getGradeComment(getLetterGrade(Math.round(student.average)))}
                         </TableCell>
                         <TableCell className="font-medium">{student.credits}</TableCell>
                         <TableCell>
@@ -641,10 +670,10 @@ export function AdminStudentsContent() {
       {/* Edit Student Dialog */}
       <Dialog
         open={!!editingStudent}
-        onOpenChange={(open) => {
+          onOpenChange={(open) => {
           if (!open) {
             setEditingStudent(null)
-            setEditFormData({ status: "", gpa: "", credits: "" })
+            setEditFormData({ status: "", credits: "" })
             setStudentDetails(null)
           }
         }}
@@ -700,19 +729,6 @@ export function AdminStudentsContent() {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold">GPA (0.00 - 4.00)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="4.0"
-                    value={editFormData.gpa}
-                    onChange={(e) => setEditFormData({ ...editFormData, gpa: e.target.value })}
-                    placeholder="0.00"
-                    className="h-11"
-                  />
-                </div>
 
                 <div className="space-y-2 md:col-span-2">
                   <Label className="text-sm font-semibold">Credits Earned</Label>
@@ -752,7 +768,7 @@ export function AdminStudentsContent() {
                   className="flex-1 h-11 bg-transparent"
                   onClick={() => {
                     setEditingStudent(null)
-                    setEditFormData({ status: "", gpa: "", credits: "" })
+                    setEditFormData({ status: "", credits: "" })
                     setStudentDetails(null)
                   }}
                   disabled={isSaving}
@@ -863,9 +879,23 @@ export function AdminStudentsContent() {
                   </CardHeader>
                   <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground uppercase tracking-wide">GPA</Label>
-                      <p className={`font-bold text-2xl ${getGPAColor(studentDetails.gpa)}`}>
-                        {studentDetails.gpa.toFixed(2)}
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wide">Average</Label>
+                      <p className={`font-bold text-2xl ${getAverageColor(studentDetails.average)}`}>
+                        {studentDetails.average.toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wide">Letter Grade</Label>
+                      <p className="font-bold text-2xl">
+                        <Badge variant="outline" className="font-mono text-lg">
+                          {getLetterGrade(Math.round(studentDetails.average))}
+                        </Badge>
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wide">Comment</Label>
+                      <p className="font-bold text-2xl text-muted-foreground">
+                        {getGradeComment(getLetterGrade(Math.round(studentDetails.average)))}
                       </p>
                     </div>
                     <div className="space-y-1">
@@ -951,9 +981,9 @@ export function AdminStudentsContent() {
                   </CardHeader>
                   <CardContent className="grid grid-cols-2 gap-6">
                     <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground uppercase tracking-wide">Overall GPA</Label>
-                      <p className={`font-bold text-3xl ${getGPAColor(studentDetails.gpa)}`}>
-                        {studentDetails.gpa.toFixed(2)}
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wide">Overall Average</Label>
+                      <p className={`font-bold text-3xl ${getAverageColor(studentDetails.average)}`}>
+                        {studentDetails.average.toFixed(2)}
                       </p>
                     </div>
                     <div className="space-y-1">
