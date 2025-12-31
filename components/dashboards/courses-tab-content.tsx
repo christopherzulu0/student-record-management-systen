@@ -4,10 +4,11 @@ import { Suspense, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Clock, Activity, Edit2, Trash2, BookOpen } from "lucide-react"
+import { Clock, Activity, Edit2, Trash2, BookOpen, UserCheck } from "lucide-react"
 import { useCourses, useDeleteCourse, type Course } from "@/lib/hooks/use-courses"
 import { CoursesTabSkeleton } from "@/components/courses-tab-skeleton"
 import { EditCourseDialog } from "./AdminComponents/EditCourseDialog"
+import { AssignGradeRecordingDialog } from "./AdminComponents/AssignGradeRecordingDialog"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +25,8 @@ function CoursesList() {
   const { data: courses } = useCourses()
   const [editingCourse, setEditingCourse] = useState<Course | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [assigningGradeRecordingCourse, setAssigningGradeRecordingCourse] = useState<Course | null>(null)
+  const [isAssignGradeRecordingDialogOpen, setIsAssignGradeRecordingDialogOpen] = useState(false)
   const [deletingCourse, setDeletingCourse] = useState<Course | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   
@@ -133,9 +136,24 @@ function CoursesList() {
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{course.description}</p>
                   )}
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
-                    {course.teacher && (
+                    {course.teachers && course.teachers.length > 0 && (
                       <>
-                        <span className="text-xs text-muted-foreground">Instructor: {course.teacher}</span>
+                        <span className="text-xs text-muted-foreground">
+                          Instructor{course.teachers.length > 1 ? 's' : ''}: {course.teachers.join(', ')}
+                          {course.teachers.length > 1 && (
+                            <Badge variant="outline" className="ml-1 text-xs">
+                              {course.teachers.length}
+                            </Badge>
+                          )}
+                        </span>
+                        <span className="text-xs text-muted-foreground">•</span>
+                      </>
+                    )}
+                    {course.gradeRecordingTeacher && (
+                      <>
+                        <Badge variant="outline" className="text-xs bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-200 border-green-200 dark:border-green-800">
+                          Grade Recorder: {course.gradeRecordingTeacher}
+                        </Badge>
                         <span className="text-xs text-muted-foreground">•</span>
                       </>
                     )}
@@ -159,6 +177,19 @@ function CoursesList() {
                   size="sm" 
                   variant="ghost" 
                   className="h-8 w-8 p-0"
+                  title="Assign Grade Recording Teacher"
+                  onClick={() => {
+                    setAssigningGradeRecordingCourse(course)
+                    setIsAssignGradeRecordingDialogOpen(true)
+                  }}
+                >
+                  <UserCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="h-8 w-8 p-0"
+                  title="Edit Course"
                   onClick={() => handleEdit(course)}
                 >
                   <Edit2 className="h-4 w-4" />
@@ -167,6 +198,7 @@ function CoursesList() {
                   size="sm" 
                   variant="ghost" 
                   className="h-8 w-8 p-0"
+                  title="Delete Course"
                   onClick={() => handleDelete(course)}
                 >
                   <Trash2 className="h-4 w-4 text-red-500" />
@@ -185,6 +217,18 @@ function CoursesList() {
           setIsEditDialogOpen(open)
           if (!open) {
             setEditingCourse(null)
+          }
+        }}
+      />
+
+      {/* Assign Grade Recording Teacher Dialog */}
+      <AssignGradeRecordingDialog
+        course={assigningGradeRecordingCourse}
+        isOpen={isAssignGradeRecordingDialogOpen}
+        onOpenChange={(open) => {
+          setIsAssignGradeRecordingDialogOpen(open)
+          if (!open) {
+            setAssigningGradeRecordingCourse(null)
           }
         }}
       />

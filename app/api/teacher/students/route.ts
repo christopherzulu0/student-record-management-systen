@@ -47,10 +47,13 @@ export async function GET() {
       )
     }
 
-    // Fetch teacher's courses
-    const courses = await prisma.course.findMany({
+    // Fetch teacher's courses from direct assignment (teacherId, gradeRecordingTeacherId)
+    const coursesDirect = await prisma.course.findMany({
       where: {
-        teacherId: teacher.id,
+        OR: [
+          { teacherId: teacher.id },
+          { gradeRecordingTeacherId: teacher.id },
+        ],
         status: 'active',
       },
       select: {
@@ -58,6 +61,39 @@ export async function GET() {
       },
     })
 
+    // Fetch courses from junction table (will work after migration)
+    let coursesViaJunction: typeof coursesDirect = []
+    try {
+      const courseTeacherRecords = await (prisma as any).courseTeacher.findMany({
+        where: { teacherId: teacher.id },
+        select: { courseId: true },
+      })
+      
+      if (courseTeacherRecords.length > 0) {
+        const courseIdsFromJunction = courseTeacherRecords.map((ct: { courseId: string }) => ct.courseId)
+        const courses = await prisma.course.findMany({
+          where: {
+            id: { in: courseIdsFromJunction },
+            status: 'active',
+          },
+          select: {
+            id: true,
+          },
+        })
+        coursesViaJunction = courses
+      }
+    } catch (error) {
+      // If CourseTeacher table doesn't exist yet, skip
+    }
+
+    // Combine and deduplicate courses
+    const allCourseIds = new Set(coursesDirect.map(c => c.id))
+    coursesViaJunction.forEach(c => {
+      if (!allCourseIds.has(c.id)) {
+        allCourseIds.add(c.id)
+      }
+    })
+    const courses = [...coursesDirect, ...coursesViaJunction.filter(c => !coursesDirect.some(cd => cd.id === c.id))]
     const courseIds = courses.map(c => c.id)
 
     if (courseIds.length === 0) {

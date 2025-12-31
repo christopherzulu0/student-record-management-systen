@@ -21,6 +21,10 @@ export interface Course {
   status: string
   teacherId: string | null
   teacher: string | null
+  teachers?: string[] // Array of all assigned teachers
+  teacherCount?: number // Number of teachers assigned
+  gradeRecordingTeacherId: string | null
+  gradeRecordingTeacher: string | null
   departmentName: string | null
   enrolledStudents: number
   createdAt: string
@@ -92,6 +96,7 @@ export interface UpdateCourseData {
   departmentId?: string
   status?: string
   teacherId?: string | null
+  gradeRecordingTeacherId?: string | null
 }
 
 async function updateCourse(id: string, data: UpdateCourseData): Promise<Course> {

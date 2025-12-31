@@ -97,9 +97,8 @@ function SemesterFormContent({ onSuccess }: { onSuccess: () => void }) {
             <SelectValue placeholder="Select semester type" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="Term 1">Term 1</SelectItem>
-            <SelectItem value="Term 2">Term 2</SelectItem>
-            <SelectItem value="Term 3">Term 3</SelectItem>
+            <SelectItem value="Semester 1">Semester 1</SelectItem>
+            <SelectItem value="Semester 2">Semester 2</SelectItem>
           </SelectContent>
         </Select>
         {nameError && (

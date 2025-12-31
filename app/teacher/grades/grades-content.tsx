@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
@@ -44,7 +44,8 @@ import {
   PaginationPrevious,
   PaginationEllipsis,
 } from "@/components/ui/pagination"
-import { useTeacherGrades, useRecordGrade, type StudentGrade } from "@/lib/hooks/use-teacher-grades"
+import { useTeacherGrades, useRecordGrade, useBulkRecordGrades, type StudentGrade } from "@/lib/hooks/use-teacher-grades"
+import { useSemesters } from "@/lib/hooks/use-semesters"
 import { toast } from "sonner"
 
 // Helper function to convert score to letter grade (matches API grading)
@@ -68,13 +69,16 @@ const getGradeComment = (grade: string): string => {
 
 export function TeacherGradesPageContent() {
   const { data } = useTeacherGrades()
+  const { data: semesters } = useSemesters()
   const recordGradeMutation = useRecordGrade()
+  const bulkRecordGradesMutation = useBulkRecordGrades()
   const [selectedCourseId, setSelectedCourseId] = useState<string>(
     data.courses.length > 0 ? data.courses[0].id : ""
   )
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isViewAllGradesDialogOpen, setIsViewAllGradesDialogOpen] = useState(false)
+  const [isBulkRecordDialogOpen, setIsBulkRecordDialogOpen] = useState(false)
   const [selectedStudentForAllGrades, setSelectedStudentForAllGrades] = useState<StudentGrade | null>(null)
   const [allGradesEdits, setAllGradesEdits] = useState<Record<string, {
     grade: string
@@ -98,6 +102,37 @@ export function TeacherGradesPageContent() {
   const [attendanceValue, setAttendanceValue] = useState<string>("")
   const [trendValue, setTrendValue] = useState<string>("stable")
   const [assignmentTypeValue, setAssignmentTypeValue] = useState<string>("")
+
+  // Form state for bulk recording grades
+  const [bulkCourseId, setBulkCourseId] = useState<string>("")
+  const [bulkSemesterId, setBulkSemesterId] = useState<string>("")
+  const [bulkDefaultScore, setBulkDefaultScore] = useState<string>("")
+  const [bulkDefaultAttendance, setBulkDefaultAttendance] = useState<string>("")
+  const [bulkDefaultTrend, setBulkDefaultTrend] = useState<string>("stable")
+  const [bulkDefaultAssignmentType, setBulkDefaultAssignmentType] = useState<string>("")
+  const [bulkStudents, setBulkStudents] = useState<Array<{
+    studentId: string
+    studentDisplayId: string
+    name: string
+    email: string
+    existingGrade: { score: number; attendance: number | null; trend: string | null; assignmentType: string | null } | null
+    grade: string
+    attendance: string
+    trend: string
+    assignmentType: string
+  }>>([])
+  const [isLoadingBulkStudents, setIsLoadingBulkStudents] = useState(false)
+  const [canRecordGrades, setCanRecordGrades] = useState<Record<string, boolean>>({})
+  const [gradePermissionError, setGradePermissionError] = useState<Record<string, string>>({})
+  const [isCheckingPermission, setIsCheckingPermission] = useState<Record<string, boolean>>({})
+
+  // Check permission for initially selected course
+  useEffect(() => {
+    if (selectedCourseId) {
+      checkGradePermission(selectedCourseId)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCourseId])
 
   // Get current course data
   const currentCourse = data.courses.find(c => c.id === selectedCourseId)
@@ -123,9 +158,54 @@ export function TeacherGradesPageContent() {
     setCurrentPage(1)
   }
 
+  // Check grade recording permission for a course
+  const checkGradePermission = async (courseId: string) => {
+    if (!courseId) {
+      setCanRecordGrades(prev => ({ ...prev, [courseId]: false }))
+      return
+    }
+
+    setIsCheckingPermission(prev => ({ ...prev, [courseId]: true }))
+    try {
+      const response = await fetch(
+        `/api/teacher/grades/check-permission?courseId=${courseId}`,
+        { credentials: "include" }
+      )
+      
+      if (!response.ok) {
+        // Handle non-200 responses
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
+        setCanRecordGrades(prev => ({ ...prev, [courseId]: false }))
+        setGradePermissionError(prev => ({ 
+          ...prev, 
+          [courseId]: errorData.details || errorData.error || "Failed to check permission. Please try again."
+        }))
+        return
+      }
+      
+      const data = await response.json()
+      
+      setCanRecordGrades(prev => ({ ...prev, [courseId]: data.hasPermission || false }))
+      setGradePermissionError(prev => ({ 
+        ...prev, 
+        [courseId]: data.hasPermission ? "" : (data.details || data.error || "You do not have permission to record grades for this course")
+      }))
+    } catch (error) {
+      console.error("Error checking grade permission:", error)
+      setCanRecordGrades(prev => ({ ...prev, [courseId]: false }))
+      setGradePermissionError(prev => ({ 
+        ...prev, 
+        [courseId]: "Failed to check permission. Please refresh the page and try again."
+      }))
+    } finally {
+      setIsCheckingPermission(prev => ({ ...prev, [courseId]: false }))
+    }
+  }
+
   const handleCourseChange = (value: string) => {
     setSelectedCourseId(value)
     setCurrentPage(1)
+    checkGradePermission(value)
   }
 
   const handleItemsPerPageChange = (value: string) => {
@@ -253,6 +333,371 @@ export function TeacherGradesPageContent() {
             <Download className="w-4 h-4" />
             Export Report
           </Button>
+          <Dialog
+            open={isBulkRecordDialogOpen}
+            onOpenChange={(open) => {
+              setIsBulkRecordDialogOpen(open)
+              if (open) {
+                setBulkCourseId(selectedCourseId)
+                setBulkSemesterId("")
+                setBulkDefaultScore("")
+                setBulkDefaultAttendance("")
+                setBulkDefaultTrend("stable")
+                setBulkDefaultAssignmentType("")
+                setBulkStudents([])
+                if (selectedCourseId) {
+                  checkGradePermission(selectedCourseId)
+                }
+              } else {
+                setBulkStudents([])
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Users className="w-4 h-4" />
+                Bulk Record Grades
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[800px] max-h-[90vh] flex flex-col p-0 gap-0">
+              <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0">
+                <DialogTitle className="text-xl">Bulk Record Grades</DialogTitle>
+                <DialogDescription>Record grades for all students enrolled in the selected course</DialogDescription>
+              </DialogHeader>
+              <div className="flex-1 overflow-y-auto px-6 min-h-0">
+                <div className="space-y-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="bulk-course" className="text-sm font-medium">
+                        Course <span className="text-red-500">*</span>
+                      </Label>
+                      <Select 
+                        value={bulkCourseId} 
+                        onValueChange={(value) => {
+                          setBulkCourseId(value)
+                          setBulkStudents([])
+                          setBulkSemesterId("")
+                          if (value) {
+                            checkGradePermission(value)
+                          }
+                        }} 
+                      >
+                        <SelectTrigger id="bulk-course">
+                          <SelectValue placeholder="Select course" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {data.courses.map((course) => (
+                            <SelectItem key={course.id} value={course.id}>
+                              {course.displayName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="bulk-semester" className="text-sm font-medium">
+                        Semester <span className="text-red-500">*</span>
+                      </Label>
+                      <Select 
+                        value={bulkSemesterId} 
+                        onValueChange={async (value) => {
+                          setBulkSemesterId(value)
+                          if (bulkCourseId && value) {
+                            setIsLoadingBulkStudents(true)
+                            try {
+                              const response = await fetch(
+                                `/api/teacher/grades/enrolled-students?courseId=${bulkCourseId}&semesterId=${value}`,
+                                { credentials: "include" }
+                              )
+                              if (response.ok) {
+                                const data = await response.json()
+                                setBulkStudents(
+                                  data.students.map((s: any) => ({
+                                    ...s,
+                                    grade: s.existingGrade?.score?.toString() || "",
+                                    attendance: s.existingGrade?.attendance?.toString() || "",
+                                    trend: s.existingGrade?.trend || "stable",
+                                    assignmentType: s.existingGrade?.assignmentType || "",
+                                  }))
+                                )
+                              } else {
+                                toast.error("Failed to load students")
+                              }
+                            } catch (error) {
+                              toast.error("Failed to load students")
+                            } finally {
+                              setIsLoadingBulkStudents(false)
+                            }
+                          }
+                        }} 
+                        disabled={!bulkCourseId || !canRecordGrades[bulkCourseId] || isCheckingPermission[bulkCourseId]}
+                      >
+                        <SelectTrigger id="bulk-semester">
+                          <SelectValue placeholder={bulkCourseId ? "Select semester" : "Select course first"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {semesters.map((semester) => (
+                            <SelectItem key={semester.id} value={semester.id}>
+                              {semester.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {bulkCourseId && (
+                    <div className="space-y-4">
+                      {!canRecordGrades[bulkCourseId] && gradePermissionError[bulkCourseId] && (
+                        <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
+                          <div className="flex items-start gap-2">
+                            <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                                Permission Denied
+                              </p>
+                              <p className="text-xs text-red-700 dark:text-red-300 mt-1">
+                                {gradePermissionError[bulkCourseId]}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {bulkCourseId && bulkSemesterId && (
+                        <>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="text-sm font-medium">Students ({bulkStudents.length})</h3>
+                              <p className="text-xs text-muted-foreground">Enter individual grades for each student</p>
+                            </div>
+                        <div className="flex gap-2">
+                          <div className="flex gap-2 items-center">
+                            <Input
+                              type="number"
+                              placeholder="Grade"
+                              className="w-20 h-8"
+                              value={bulkDefaultScore}
+                              onChange={(e) => setBulkDefaultScore(e.target.value)}
+                              disabled={!canRecordGrades[bulkCourseId] || isCheckingPermission[bulkCourseId]}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setBulkStudents(prev => prev.map(s => ({
+                                  ...s,
+                                  grade: bulkDefaultScore || s.grade,
+                                })))
+                              }}
+                              disabled={!bulkDefaultScore || !canRecordGrades[bulkCourseId] || isCheckingPermission[bulkCourseId]}
+                            >
+                              Apply to All
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {isLoadingBulkStudents ? (
+                        <div className="flex items-center justify-center py-8">
+                          <div className="text-sm text-muted-foreground">Loading students...</div>
+                        </div>
+                      ) : bulkStudents.length === 0 ? (
+                        <div className="text-center py-8 text-sm text-muted-foreground">
+                          No students enrolled in this course for the selected semester
+                        </div>
+                      ) : (
+                        <ScrollArea className="h-[400px] border rounded-lg p-4">
+                          <div className="space-y-3">
+                            {bulkStudents.map((student, index) => (
+                              <Card key={student.studentId} className="p-3">
+                                <div className="grid grid-cols-12 gap-2 items-center">
+                                  <div className="col-span-3">
+                                    <div className="text-sm font-medium">{student.name}</div>
+                                    <div className="text-xs text-muted-foreground">{student.studentDisplayId}</div>
+                                  </div>
+                                  <div className="col-span-2">
+                                    <Label className="text-xs">Grade</Label>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      max="100"
+                                      placeholder="0-100"
+                                      value={student.grade}
+                                      onChange={(e) => {
+                                        setBulkStudents(prev => prev.map((s, i) => 
+                                          i === index ? { ...s, grade: e.target.value } : s
+                                        ))
+                                      }}
+                                      className="h-8"
+                                      disabled={!canRecordGrades[bulkCourseId] || isCheckingPermission[bulkCourseId]}
+                                    />
+                                  </div>
+                                  <div className="col-span-2">
+                                    <Label className="text-xs">Attendance</Label>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      max="100"
+                                      placeholder="%"
+                                      value={student.attendance}
+                                      onChange={(e) => {
+                                        setBulkStudents(prev => prev.map((s, i) => 
+                                          i === index ? { ...s, attendance: e.target.value } : s
+                                        ))
+                                      }}
+                                      className="h-8"
+                                      disabled={!canRecordGrades[bulkCourseId] || isCheckingPermission[bulkCourseId]}
+                                    />
+                                  </div>
+                                  <div className="col-span-2">
+                                    <Label className="text-xs">Trend</Label>
+                                    <Select
+                                      value={student.trend}
+                                      onValueChange={(value) => {
+                                        setBulkStudents(prev => prev.map((s, i) => 
+                                          i === index ? { ...s, trend: value } : s
+                                        ))
+                                      }}
+                                      disabled={!canRecordGrades[bulkCourseId] || isCheckingPermission[bulkCourseId]}
+                                    >
+                                      <SelectTrigger className="h-8 text-xs">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="up">Up</SelectItem>
+                                        <SelectItem value="stable">Stable</SelectItem>
+                                        <SelectItem value="down">Down</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="col-span-3">
+                                    <Label className="text-xs">Assignment Type</Label>
+                                    <Select
+                                      value={student.assignmentType}
+                                      onValueChange={(value) => {
+                                        setBulkStudents(prev => prev.map((s, i) => 
+                                          i === index ? { ...s, assignmentType: value } : s
+                                        ))
+                                      }}
+                                      disabled={!canRecordGrades[bulkCourseId] || isCheckingPermission[bulkCourseId]}
+                                    >
+                                      <SelectTrigger className="h-8 text-xs">
+                                        <SelectValue placeholder="Type" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="midterm">Midterm</SelectItem>
+                                        <SelectItem value="final">Final</SelectItem>
+                                        <SelectItem value="assignment">Assignment</SelectItem>
+                                        <SelectItem value="project">Project</SelectItem>
+                                        <SelectItem value="participation">Participation</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                              </Card>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-2 px-6 pb-6 pt-4 border-t flex-shrink-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    setIsBulkRecordDialogOpen(false)
+                    setBulkCourseId("")
+                    setBulkSemesterId("")
+                    setBulkDefaultScore("")
+                    setBulkDefaultAttendance("")
+                    setBulkDefaultTrend("stable")
+                    setBulkDefaultAssignmentType("")
+                    setBulkStudents([])
+                  }}
+                  disabled={bulkRecordGradesMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  className="flex-1"
+                  disabled={
+                    bulkRecordGradesMutation.isPending || 
+                    bulkStudents.length === 0 || 
+                    !canRecordGrades[bulkCourseId] || 
+                    isCheckingPermission[bulkCourseId]
+                  }
+                  onClick={async () => {
+                    if (!bulkCourseId || !bulkSemesterId) {
+                      toast.error("Please select course and semester")
+                      return
+                    }
+
+                    if (!canRecordGrades[bulkCourseId]) {
+                      toast.error(gradePermissionError[bulkCourseId] || "You do not have permission to record grades for this course")
+                      return
+                    }
+
+                    const validStudents = bulkStudents.filter(s => s.grade && s.grade.trim() !== "")
+                    if (validStudents.length === 0) {
+                      toast.error("Please enter at least one grade")
+                      return
+                    }
+
+                    try {
+                      const result = await bulkRecordGradesMutation.mutateAsync({
+                        courseId: bulkCourseId,
+                        semesterId: bulkSemesterId,
+                        studentGrades: validStudents.map(s => ({
+                          studentId: s.studentId,
+                          score: Number(s.grade),
+                          attendance: s.attendance && s.attendance.trim() !== '' ? Number(s.attendance) : null,
+                          trend: s.trend as "up" | "down" | "stable",
+                          assignmentType: s.assignmentType || undefined,
+                        })),
+                      })
+                      
+                      toast.success(
+                        result.errors && result.errors.length > 0
+                          ? `Recorded grades for ${result.successful} of ${result.total} students. ${result.failed} failed.`
+                          : `Successfully recorded grades for all ${result.total} students`
+                      )
+                      
+                      if (result.errors && result.errors.length > 0) {
+                        console.error("Grade recording errors:", result.errors)
+                      }
+                      
+                      setIsBulkRecordDialogOpen(false)
+                      setBulkCourseId("")
+                      setBulkSemesterId("")
+                      setBulkDefaultScore("")
+                      setBulkDefaultAttendance("")
+                      setBulkDefaultTrend("stable")
+                      setBulkDefaultAssignmentType("")
+                      setBulkStudents([])
+                    } catch (error) {
+                      toast.error(error instanceof Error ? error.message : "Failed to bulk record grades")
+                    }
+                  }}
+                >
+                  {isCheckingPermission[bulkCourseId] 
+                    ? "Checking permission..." 
+                    : bulkRecordGradesMutation.isPending 
+                      ? "Recording..." 
+                      : !canRecordGrades[bulkCourseId]
+                        ? "No Permission"
+                        : `Record ${bulkStudents.filter(s => s.grade && s.grade.trim() !== "").length} Grades`}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
           <Dialog 
             open={isDialogOpen} 
             onOpenChange={(open) => {
@@ -265,6 +710,9 @@ export function TeacherGradesPageContent() {
                 setAttendanceValue("")
                 setTrendValue("stable")
                 setAssignmentTypeValue("")
+                if (selectedCourseId) {
+                  checkGradePermission(selectedCourseId)
+                }
               } else {
                 // Reset form when dialog closes
                 setSelectedStudentId("")
@@ -295,6 +743,11 @@ export function TeacherGradesPageContent() {
                   
                   if (!selectedStudentId || !gradeValue || !dialogCourseId) {
                     toast.error("Please fill in all required fields")
+                    return
+                  }
+
+                  if (!canRecordGrades[dialogCourseId]) {
+                    toast.error(gradePermissionError[dialogCourseId] || "You do not have permission to record grades for this course")
                     return
                   }
 
@@ -347,6 +800,9 @@ export function TeacherGradesPageContent() {
                       setDialogCourseId(value)
                       // Reset student selection when course changes
                       setSelectedStudentId("")
+                      if (value) {
+                        checkGradePermission(value)
+                      }
                     }} 
                     required
                   >
@@ -384,6 +840,21 @@ export function TeacherGradesPageContent() {
                     </SelectContent>
                   </Select>
                 </div>
+                {dialogCourseId && !canRecordGrades[dialogCourseId] && gradePermissionError[dialogCourseId] && (
+                  <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                          Permission Denied
+                        </p>
+                        <p className="text-xs text-red-700 dark:text-red-300 mt-1">
+                          {gradePermissionError[dialogCourseId]}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="grade" className="text-sm font-medium">
                     Grade (0-100) <span className="text-red-500">*</span>
@@ -397,6 +868,7 @@ export function TeacherGradesPageContent() {
                     value={gradeValue}
                     onChange={(e) => setGradeValue(e.target.value)}
                     required
+                    disabled={dialogCourseId ? !canRecordGrades[dialogCourseId] : false}
                   />
                 </div>
                 <div className="space-y-2">
@@ -469,9 +941,18 @@ export function TeacherGradesPageContent() {
                   type="submit"
                   form="record-grade-form"
                   className="flex-1"
-                  disabled={recordGradeMutation.isPending}
+                  disabled={
+                    recordGradeMutation.isPending || 
+                    (dialogCourseId ? (!canRecordGrades[dialogCourseId] || isCheckingPermission[dialogCourseId]) : false)
+                  }
                 >
-                  {recordGradeMutation.isPending ? "Saving..." : "Save Grade"}
+                  {isCheckingPermission[dialogCourseId] 
+                    ? "Checking permission..." 
+                    : recordGradeMutation.isPending 
+                      ? "Saving..." 
+                      : dialogCourseId && !canRecordGrades[dialogCourseId]
+                        ? "No Permission"
+                        : "Save Grade"}
                 </Button>
               </div>
             </DialogContent>

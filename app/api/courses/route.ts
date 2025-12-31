@@ -48,6 +48,17 @@ export async function GET() {
             },
           },
         },
+        gradeRecordingTeacher: {
+          include: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+          },
+        },
         departmentRelation: {
           select: {
             name: true,
@@ -61,22 +72,72 @@ export async function GET() {
       },
     })
 
-    const formattedCourses = courses.map(course => ({
-      id: course.id,
-      courseCode: course.courseCode,
-      name: course.name,
-      description: course.description,
-      credits: course.credits,
-      department: course.department,
-      departmentId: course.departmentId,
-      status: course.status,
-      teacherId: course.teacherId,
-      teacher: course.teacher ? `${course.teacher.user?.firstName} ${course.teacher.user?.lastName}`.trim() : null,
-      departmentName: course.departmentRelation?.name || course.department,
-      enrolledStudents: course._count.enrollments,
-      createdAt: course.createdAt.toISOString(),
-      updatedAt: course.updatedAt.toISOString(),
-    }))
+    // Get all course-teacher relationships from junction table
+    const allCourseTeachers: Record<string, Array<{ teacherId: string; name: string }>> = {}
+    try {
+      const courseTeacherRecords = await (prisma as any).courseTeacher.findMany({
+        include: {
+          teacher: {
+            include: {
+              user: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                },
+              },
+            },
+          },
+        },
+      })
+      
+      courseTeacherRecords.forEach((ct: any) => {
+        if (!allCourseTeachers[ct.courseId]) {
+          allCourseTeachers[ct.courseId] = []
+        }
+        allCourseTeachers[ct.courseId].push({
+          teacherId: ct.teacherId,
+          name: `${ct.teacher.user?.firstName} ${ct.teacher.user?.lastName}`.trim() || ct.teacher.user?.email,
+        })
+      })
+    } catch (error) {
+      // If CourseTeacher table doesn't exist yet, skip
+    }
+
+    const formattedCourses = courses.map(course => {
+      // Get all teachers assigned to the course (from junction table)
+      const junctionTeachers = allCourseTeachers[course.id] || []
+      const allTeachers = junctionTeachers.map(ct => ct.name)
+      
+      // Primary teacher (for backward compatibility)
+      const primaryTeacher = course.teacher 
+        ? `${course.teacher.user?.firstName} ${course.teacher.user?.lastName}`.trim() 
+        : null
+
+      // Combine all teachers (deduplicate)
+      const uniqueTeachers = Array.from(new Set([...allTeachers, ...(primaryTeacher ? [primaryTeacher] : [])]))
+
+      return {
+        id: course.id,
+        courseCode: course.courseCode,
+        name: course.name,
+        description: course.description,
+        credits: course.credits,
+        department: course.department,
+        departmentId: course.departmentId,
+        status: course.status,
+        teacherId: course.teacherId,
+        teacher: primaryTeacher || (uniqueTeachers.length > 0 ? uniqueTeachers[0] : null),
+        teachers: uniqueTeachers,
+        teacherCount: uniqueTeachers.length,
+        gradeRecordingTeacherId: course.gradeRecordingTeacherId,
+        gradeRecordingTeacher: course.gradeRecordingTeacher ? `${course.gradeRecordingTeacher.user?.firstName} ${course.gradeRecordingTeacher.user?.lastName}`.trim() : null,
+        departmentName: course.departmentRelation?.name || course.department,
+        enrolledStudents: course._count.enrollments,
+        createdAt: course.createdAt.toISOString(),
+        updatedAt: course.updatedAt.toISOString(),
+      }
+    })
 
     return NextResponse.json(formattedCourses)
   } catch (error) {

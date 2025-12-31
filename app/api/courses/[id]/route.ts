@@ -38,7 +38,7 @@ export async function PUT(
     const resolvedParams = await Promise.resolve(params)
     const { id } = resolvedParams
     const body = await request.json()
-    const { courseCode, name, description, credits, department, departmentId, status } = body
+    const { courseCode, name, description, credits, department, departmentId, status, gradeRecordingTeacherId } = body
 
     // Check if course exists
     const existingCourse = await prisma.course.findUnique({
@@ -117,6 +117,27 @@ export async function PUT(
       }
     }
 
+    // Handle gradeRecordingTeacherId if provided
+    let gradeRecordingTeacherIdValue = existingCourse.gradeRecordingTeacherId
+    if (gradeRecordingTeacherId !== undefined) {
+      // If gradeRecordingTeacherId is explicitly set to null or empty string, remove assignment
+      if (gradeRecordingTeacherId === null || gradeRecordingTeacherId === '') {
+        gradeRecordingTeacherIdValue = null
+      } else if (gradeRecordingTeacherId) {
+        // Validate that the teacher exists
+        const teacher = await prisma.teacher.findUnique({
+          where: { id: gradeRecordingTeacherId },
+        })
+        if (!teacher) {
+          return NextResponse.json(
+            { error: 'Grade recording teacher not found' },
+            { status: 404 }
+          )
+        }
+        gradeRecordingTeacherIdValue = gradeRecordingTeacherId
+      }
+    }
+
     // Update course
     const course = await prisma.course.update({
       where: { id },
@@ -129,9 +150,21 @@ export async function PUT(
         departmentId: departmentId || null,
         status: status || existingCourse.status,
         teacherId: teacherIdValue,
+        gradeRecordingTeacherId: gradeRecordingTeacherIdValue,
       },
       include: {
         teacher: {
+          include: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+          },
+        },
+        gradeRecordingTeacher: {
           include: {
             user: {
               select: {
@@ -155,6 +188,41 @@ export async function PUT(
       },
     })
 
+    // Get teachers from junction table
+    let junctionTeachers: Array<{ teacherId: string; name: string }> = []
+    try {
+      const courseTeacherRecords = await (prisma as any).courseTeacher.findMany({
+        where: { courseId: course.id },
+        include: {
+          teacher: {
+            include: {
+              user: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                },
+              },
+            },
+          },
+        },
+      })
+      junctionTeachers = courseTeacherRecords.map((ct: any) => ({
+        teacherId: ct.teacherId,
+        name: `${ct.teacher.user?.firstName} ${ct.teacher.user?.lastName}`.trim() || ct.teacher.user?.email,
+      }))
+    } catch (error) {
+      // If CourseTeacher table doesn't exist yet, skip
+    }
+
+    const primaryTeacher = course.teacher 
+      ? `${course.teacher.user?.firstName} ${course.teacher.user?.lastName}`.trim() 
+      : null
+    const allTeachers = Array.from(new Set([
+      ...junctionTeachers.map(ct => ct.name),
+      ...(primaryTeacher ? [primaryTeacher] : [])
+    ]))
+
     const formattedCourse = {
       id: course.id,
       courseCode: course.courseCode,
@@ -165,7 +233,11 @@ export async function PUT(
       departmentId: course.departmentId,
       status: course.status,
       teacherId: course.teacherId,
-      teacher: course.teacher ? `${course.teacher.user?.firstName} ${course.teacher.user?.lastName}`.trim() : null,
+      teacher: primaryTeacher || (allTeachers.length > 0 ? allTeachers[0] : null),
+      teachers: allTeachers,
+      teacherCount: allTeachers.length,
+      gradeRecordingTeacherId: course.gradeRecordingTeacherId,
+      gradeRecordingTeacher: course.gradeRecordingTeacher ? `${course.gradeRecordingTeacher.user?.firstName} ${course.gradeRecordingTeacher.user?.lastName}`.trim() : null,
       departmentName: course.departmentRelation?.name || course.department,
       enrolledStudents: course._count.enrollments,
       createdAt: course.createdAt.toISOString(),

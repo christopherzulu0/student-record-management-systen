@@ -142,7 +142,7 @@ export async function GET() {
     const allGradeScores = allGrades.filter((g) => g.score !== null && g.score !== undefined).map((g) => g.score || 0)
     const systemAverage = allGradeScores.length > 0
       ? allGradeScores.reduce((sum, score) => sum + score, 0) / allGradeScores.length
-      : 0
+        : 0
 
     // Calculate pass rate (grades >= 60 or letter grade >= D)
     const passingGrades = allGrades.filter((g) => {
@@ -210,7 +210,7 @@ export async function GET() {
         .map((g) => g.score || 0)
       const deptAvgAverage = deptScores.length > 0
         ? deptScores.reduce((sum, score) => sum + score, 0) / deptScores.length
-        : 0
+          : 0
 
       // Calculate pass rate for department
       const deptPassingGrades = deptGrades.filter((g) => {

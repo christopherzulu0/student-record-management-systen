@@ -2,7 +2,9 @@
 import { config } from 'dotenv'
 import { resolve } from 'path'
 import { existsSync } from 'fs'
-import { PrismaClient } from '../lib/generated/prisma/client'
+import { prisma } from '@/lib/prisma'
+
+
 
 // Try to load .env.local first (Next.js convention), then .env as fallback
 const envLocalPath = resolve(process.cwd(), '.env.local')
@@ -26,7 +28,6 @@ if (!process.env.DATABASE_URL) {
   process.exit(1)
 }
 
-const prisma = new PrismaClient()
 
 // Default departments to migrate
 const departments = [

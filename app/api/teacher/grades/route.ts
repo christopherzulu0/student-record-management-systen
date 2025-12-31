@@ -5,6 +5,93 @@ import {prisma} from '@/lib/prisma'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
+// Helper function to check grade recording permissions
+async function checkGradeRecordingPermission(
+  teacherId: string,
+  courseId: string
+): Promise<{ hasPermission: boolean; error?: string; details?: string }> {
+  const course = await prisma.course.findUnique({
+    where: { id: courseId },
+    select: { 
+      teacherId: true, 
+      gradeRecordingTeacherId: true,
+      status: true,
+      courseCode: true,
+      name: true,
+    },
+  })
+
+  if (!course) {
+    return { hasPermission: false, error: 'Course not found' }
+  }
+
+  // Get all teachers assigned to this course (from junction table)
+  // Note: This will work after migration is applied and Prisma client is regenerated
+  let assignedTeacherIds = new Set<string>()
+  if (course.teacherId) {
+    assignedTeacherIds.add(course.teacherId)
+  }
+  
+  // Try to get teachers from junction table (will work after migration)
+  try {
+    const courseTeachers = await (prisma as any).courseTeacher.findMany({
+      where: { courseId },
+      select: { teacherId: true },
+    })
+    courseTeachers.forEach((ct: { teacherId: string }) => {
+      assignedTeacherIds.add(ct.teacherId)
+    })
+  } catch (error) {
+    // If CourseTeacher table doesn't exist yet, just use teacherId
+    // This is a fallback until migration is applied
+  }
+
+  // Check if teacher is assigned to the course
+  const isAssignedTeacher = assignedTeacherIds.has(teacherId)
+  const assignedTeachersCount = assignedTeacherIds.size
+
+  // Permission logic:
+  // 1. If only one teacher is assigned, they have permission automatically
+  // 2. If more than one teacher is assigned, a gradeRecordingTeacherId MUST be set
+  // 3. If gradeRecordingTeacherId is set, only that teacher has permission
+  let hasPermission = false
+  let errorMessage = ''
+  let details = ''
+
+  if (assignedTeachersCount <= 1) {
+    // Single teacher assigned - allow if it's this teacher
+    hasPermission = isAssignedTeacher
+    if (!isAssignedTeacher) {
+      errorMessage = 'Forbidden - You are not assigned to this course'
+      details = 'Only the assigned teacher can record grades.'
+    }
+  } else {
+    // Multiple teachers assigned - MUST have a gradeRecordingTeacherId set
+    if (!course.gradeRecordingTeacherId) {
+      hasPermission = false
+      errorMessage = 'Forbidden - Grade recording teacher not assigned'
+      details = 'Multiple teachers are assigned to this course. An admin must select which teacher is responsible for recording grades.'
+    } else {
+      // A specific teacher is assigned to record grades
+      hasPermission = course.gradeRecordingTeacherId === teacherId
+      if (!hasPermission) {
+        errorMessage = 'Forbidden - You are not the assigned grade recording teacher'
+        details = 'Another teacher has been assigned to record grades for this course.'
+      }
+    }
+  }
+
+  if (!hasPermission) {
+    return {
+      hasPermission: false,
+      error: errorMessage,
+      details: details,
+    }
+  }
+
+  return { hasPermission: true }
+}
+
 // Helper function to calculate letter grade from score
 const getLetterGrade = (score: number): string => {
   if (score >= 90) return 'A'
@@ -57,20 +144,69 @@ export async function GET() {
     }
 
     // Fetch teacher's courses
-    const courses = await prisma.course.findMany({
+    // Include courses where teacher is assigned (via teacherId, gradeRecordingTeacherId, or courseTeachers junction table)
+    // First get courses via direct relationships
+    const coursesDirect = await prisma.course.findMany({
       where: {
-        teacherId: teacher.id,
+        OR: [
+          { teacherId: teacher.id },
+          { gradeRecordingTeacherId: teacher.id },
+        ],
         status: 'active',
       },
       select: {
         id: true,
         courseCode: true,
         name: true,
+        teacherId: true,
+        gradeRecordingTeacherId: true,
       },
       orderBy: {
         courseCode: 'asc',
       },
     })
+
+    // Get courses via junction table (will work after migration)
+    let coursesViaJunction: typeof coursesDirect = []
+    try {
+      const courseTeacherRecords = await (prisma as any).courseTeacher.findMany({
+        where: { teacherId: teacher.id },
+        select: { courseId: true },
+      })
+      
+      if (courseTeacherRecords.length > 0) {
+        const courseIds = courseTeacherRecords.map((ct: { courseId: string }) => ct.courseId)
+        const courses = await prisma.course.findMany({
+          where: {
+            id: { in: courseIds },
+            status: 'active',
+          },
+          select: {
+            id: true,
+            courseCode: true,
+            name: true,
+            teacherId: true,
+            gradeRecordingTeacherId: true,
+          },
+          orderBy: {
+            courseCode: 'asc',
+          },
+        })
+        coursesViaJunction = courses
+      }
+    } catch (error) {
+      // If CourseTeacher table doesn't exist yet, skip
+    }
+
+    // Combine and deduplicate courses
+    const allCourseIds = new Set(coursesDirect.map(c => c.id))
+    coursesViaJunction.forEach(c => {
+      if (!allCourseIds.has(c.id)) {
+        allCourseIds.add(c.id)
+      }
+    })
+    const courses = [...coursesDirect, ...coursesViaJunction.filter(c => !coursesDirect.some(cd => cd.id === c.id))]
+      .sort((a, b) => a.courseCode.localeCompare(b.courseCode))
 
     const courseIds = courses.map(c => c.id)
 
@@ -375,23 +511,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify the course belongs to this teacher
-    const course = await prisma.course.findUnique({
-      where: { id: courseId },
-      select: { teacherId: true, status: true },
-    })
-
-    if (!course) {
+    // Check grade recording permissions
+    const permissionCheck = await checkGradeRecordingPermission(teacher.id, courseId)
+    if (!permissionCheck.hasPermission) {
       return NextResponse.json(
-        { error: 'Course not found' },
-        { status: 404 }
-      )
-    }
-
-    if (course.teacherId !== teacher.id) {
-      return NextResponse.json(
-        { error: 'Forbidden - You can only record grades for your own courses' },
-        { status: 403 }
+        { 
+          error: permissionCheck.error || 'Forbidden',
+          details: permissionCheck.details,
+        },
+        { status: permissionCheck.error === 'Course not found' ? 404 : 403 }
       )
     }
 

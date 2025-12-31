@@ -57,10 +57,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify the course belongs to this teacher
+    // Verify the course exists and check if teacher is assigned
     const course = await prisma.course.findUnique({
       where: { id: courseId },
-      select: { teacherId: true, status: true },
+      select: { 
+        teacherId: true, 
+        gradeRecordingTeacherId: true,
+        status: true 
+      },
     })
 
     if (!course) {
@@ -70,9 +74,27 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (course.teacherId !== teacher.id) {
+    // Check if teacher is assigned via primary teacherId or gradeRecordingTeacherId
+    let isAssignedTeacher = course.teacherId === teacher.id || course.gradeRecordingTeacherId === teacher.id
+
+    // Check if teacher is assigned via CourseTeacher junction table
+    if (!isAssignedTeacher) {
+      try {
+        const courseTeacher = await (prisma as any).courseTeacher.findFirst({
+          where: {
+            courseId: courseId,
+            teacherId: teacher.id,
+          },
+        })
+        isAssignedTeacher = !!courseTeacher
+      } catch (error) {
+        // If CourseTeacher table doesn't exist yet, skip
+      }
+    }
+
+    if (!isAssignedTeacher) {
       return NextResponse.json(
-        { error: 'Forbidden - You can only enroll students in your own courses' },
+        { error: 'Forbidden - You can only enroll students in courses you are assigned to' },
         { status: 403 }
       )
     }

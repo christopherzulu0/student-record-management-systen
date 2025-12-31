@@ -4,9 +4,14 @@ import { useSuspenseQuery } from "@tanstack/react-query"
 import type { User } from "@/lib/db"
 
 async function fetchUser(): Promise<User> {
-  // Ensure we're on the client side
+  // Ensure we're on the client side - useSuspenseQuery in client components
+  // may still attempt to execute during SSR, so we need this check
   if (typeof window === "undefined") {
-    throw new Error("fetchUser can only be called on the client side")
+    // Throw an error that will cause Suspense to catch and retry on the client
+    // This is expected behavior for client-only data fetching
+    throw new Promise(() => {
+      // Never resolves, causing Suspense to wait and Next.js to switch to client rendering
+    })
   }
 
   // Use absolute URL for client-side fetching

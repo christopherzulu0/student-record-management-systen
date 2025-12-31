@@ -154,3 +154,79 @@ export function useRecordGrade() {
   })
 }
 
+export interface BulkRecordGradeData {
+  courseId: string
+  semesterId: string
+  studentGrades: Array<{
+    studentId: string
+    score: number
+    attendance?: number | null
+    trend?: "up" | "down" | "stable"
+    assignmentType?: string
+  }>
+}
+
+export interface BulkRecordGradeResponse {
+  message: string
+  results: Array<{
+    studentId: string
+    studentName: string
+    grade: number
+    letterGrade: string | null
+  }>
+  errors?: Array<{
+    studentId: string
+    studentName: string
+    error: string
+  }>
+  total: number
+  successful: number
+  failed: number
+}
+
+async function bulkRecordGrades(data: BulkRecordGradeData): Promise<BulkRecordGradeResponse> {
+  const url = typeof window !== "undefined" 
+    ? `${window.location.origin}/api/teacher/grades/bulk`
+    : "/api/teacher/grades/bulk"
+  
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify(data),
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json()
+    if (response.status === 401) {
+      throw new Error("Unauthorized - Please login first")
+    }
+    if (response.status === 403) {
+      throw new Error(errorData.details || errorData.error || "Forbidden - You do not have permission to record grades for this course")
+    }
+    if (response.status === 404) {
+      throw new Error(errorData.error || "Course, semester, or students not found")
+    }
+    if (response.status === 400) {
+      throw new Error(errorData.error || "Invalid grade data")
+    }
+    throw new Error(errorData.error || "Failed to bulk record grades")
+  }
+
+  return response.json()
+}
+
+export function useBulkRecordGrades() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: bulkRecordGrades,
+    onSuccess: () => {
+      // Invalidate and refetch grades data
+      queryClient.invalidateQueries({ queryKey: ["teacher-grades"] })
+    },
+  })
+}
+

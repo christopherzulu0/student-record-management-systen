@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2 } from "lucide-react"
 import { useUpdateCourse, type Course } from "@/lib/hooks/use-courses"
 import { useDepartments } from "@/lib/hooks/use-departments"
+import { useTeachers } from "@/lib/hooks/use-teachers-assign"
 import { toast } from "sonner"
 
 interface EditCourseDialogProps {
@@ -24,10 +25,12 @@ function EditCourseFormContent({ course, onOpenChange }: { course: Course; onOpe
   const [credits, setCredits] = useState("3")
   const [departmentId, setDepartmentId] = useState("")
   const [status, setStatus] = useState("active")
+  const [gradeRecordingTeacherId, setGradeRecordingTeacherId] = useState("")
   const [courseCodeError, setCourseCodeError] = useState("")
   
   const updateCourse = useUpdateCourse()
   const { data: departments } = useDepartments()
+  const { data: teachers } = useTeachers()
 
   useEffect(() => {
     if (course) {
@@ -37,6 +40,7 @@ function EditCourseFormContent({ course, onOpenChange }: { course: Course; onOpe
       setCredits(course.credits.toString())
       setDepartmentId(course.departmentId || "")
       setStatus(course.status)
+      setGradeRecordingTeacherId(course.gradeRecordingTeacherId || "")
       setCourseCodeError("")
     }
   }, [course])
@@ -63,6 +67,7 @@ function EditCourseFormContent({ course, onOpenChange }: { course: Course; onOpe
           credits: credits ? parseInt(credits) : 3,
           departmentId: departmentId && departmentId !== "__none__" ? departmentId : undefined,
           status,
+          gradeRecordingTeacherId: gradeRecordingTeacherId && gradeRecordingTeacherId !== "__none__" ? gradeRecordingTeacherId : null,
         },
       })
       
@@ -159,6 +164,28 @@ function EditCourseFormContent({ course, onOpenChange }: { course: Course; onOpe
           </SelectContent>
         </Select>
       </div>
+      <div className="space-y-2">
+        <Label htmlFor="edit-grade-recording-teacher">Grade Recording Teacher</Label>
+        <Select 
+          value={gradeRecordingTeacherId || undefined} 
+          onValueChange={(value) => setGradeRecordingTeacherId(value || "")}
+        >
+          <SelectTrigger id="edit-grade-recording-teacher">
+            <SelectValue placeholder="Select teacher (optional)" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">None</SelectItem>
+            {teachers.map((teacher) => (
+              <SelectItem key={teacher.id} value={teacher.id}>
+                {teacher.name} {teacher.email ? `(${teacher.email})` : ""}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          Only the selected teacher can record grades for this course. Leave empty to allow all assigned teachers.
+        </p>
+      </div>
       <Button
         type="submit"
         className="w-full bg-blue-600 hover:bg-blue-700"
@@ -175,20 +202,22 @@ export function EditCourseDialog({ course, isOpen, onOpenChange }: EditCourseDia
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
+      <DialogContent className="max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Edit Course</DialogTitle>
           <DialogDescription>Update course information</DialogDescription>
         </DialogHeader>
-        <Suspense
-          fallback={
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          }
-        >
-          <EditCourseFormContent course={course} onOpenChange={onOpenChange} />
-        </Suspense>
+        <div className="flex-1 overflow-y-auto pr-2 -mr-2">
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            }
+          >
+            <EditCourseFormContent course={course} onOpenChange={onOpenChange} />
+          </Suspense>
+        </div>
       </DialogContent>
     </Dialog>
   )

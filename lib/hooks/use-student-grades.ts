@@ -36,9 +36,14 @@ export interface StudentGradesResponse {
 }
 
 async function fetchStudentGrades(): Promise<StudentGradesResponse> {
-  // Ensure we're on the client side
+  // Ensure we're on the client side - useSuspenseQuery in client components
+  // may still attempt to execute during SSR, so we need this check
   if (typeof window === "undefined") {
-    throw new Error("fetchStudentGrades can only be called on the client side")
+    // Throw a promise that will cause Suspense to catch and retry on the client
+    // This is expected behavior for client-only data fetching
+    throw new Promise(() => {
+      // Never resolves, causing Suspense to wait and Next.js to switch to client rendering
+    })
   }
 
   // Use absolute URL for client-side fetching
