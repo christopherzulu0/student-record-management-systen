@@ -2,33 +2,29 @@
 
 import { useSuspenseQuery } from "@tanstack/react-query"
 
-export interface TranscriptCourse {
-  code: string
+export interface AdminUser {
+  id: string
+  userId: string
   name: string
-  credits: number
-  grade: string
-  score: number
-}
-
-export interface TranscriptSemester {
-  semester: string
-  average: number
-  courses: TranscriptCourse[]
-}
-
-export interface StudentTranscriptResponse {
-  studentName: string
-  studentId: string
   email: string
-  enrollmentDate: string
-  average: number
-  totalCreditsEarned: number
-  totalCreditsRequired: number
-  academicStanding: string
-  semesters: TranscriptSemester[]
+  role: string
+  status: string
+  createdAt: string
 }
 
-async function fetchStudentTranscript(): Promise<StudentTranscriptResponse> {
+export interface AdminUsersStatistics {
+  total: number
+  students: number
+  teachers: number
+  admins: number
+}
+
+export interface AdminUsersResponse {
+  users: AdminUser[]
+  statistics: AdminUsersStatistics
+}
+
+async function fetchAdminUsers(): Promise<AdminUsersResponse> {
   // Ensure we're on the client side - useSuspenseQuery in client components
   // may still attempt to execute during SSR, so we need this check
   if (typeof window === "undefined") {
@@ -41,7 +37,7 @@ async function fetchStudentTranscript(): Promise<StudentTranscriptResponse> {
 
   // Use absolute URL for client-side fetching
   const baseUrl = window.location.origin
-  const response = await fetch(`${baseUrl}/api/student/transcript`, {
+  const response = await fetch(`${baseUrl}/api/admin/users`, {
     credentials: "include", // Include cookies for authentication
   })
 
@@ -51,18 +47,19 @@ async function fetchStudentTranscript(): Promise<StudentTranscriptResponse> {
       throw new Error("Unauthorized - Please login first")
     }
     if (response.status === 403) {
-      throw new Error("Forbidden - Student access required")
+      throw new Error("Forbidden - Admin access required")
     }
-    throw new Error(errorData.error || "Failed to fetch student transcript")
+    throw new Error(errorData.error || "Failed to fetch admin users")
   }
 
   return response.json()
 }
 
-export function useStudentTranscript() {
+export function useAdminUsers() {
   return useSuspenseQuery({
-    queryKey: ["student-transcript"],
-    queryFn: fetchStudentTranscript,
+    queryKey: ["admin-users"],
+    queryFn: fetchAdminUsers,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   })
 }
 
