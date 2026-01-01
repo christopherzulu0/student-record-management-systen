@@ -1,0 +1,374 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model admins {
+  id         String   @id
+  user_id    String   @unique
+  admin_id   String?  @unique
+  created_at DateTime @default(now())
+  updated_at DateTime
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model course_teachers {
+  id         String   @id
+  course_id  String
+  teacher_id String
+  created_at DateTime @default(now())
+  updated_at DateTime
+  courses    courses  @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  teachers   teachers @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
+
+  @@unique([course_id, teacher_id])
+}
+
+model courses {
+  id                                                    String            @id
+  course_code                                           String            @unique
+  name                                                  String
+  description                                           String?
+  credits                                               Int               @default(3)
+  department                                            String?
+  department_id                                         String?
+  status                                                CourseStatus      @default(active)
+  created_at                                            DateTime          @default(now())
+  updated_at                                            DateTime
+  teacher_id                                            String?
+  grade_recording_teacher_id                            String?
+  course_teachers                                       course_teachers[]
+  departments                                           departments?      @relation(fields: [department_id], references: [id])
+  teachers_courses_grade_recording_teacher_idToteachers teachers?         @relation("courses_grade_recording_teacher_idToteachers", fields: [grade_recording_teacher_id], references: [id])
+  teachers_courses_teacher_idToteachers                 teachers?         @relation("courses_teacher_idToteachers", fields: [teacher_id], references: [id])
+  enrollments                                           enrollments[]
+  grades                                                grades[]
+  recommendations                                       recommendations[]
+}
+
+model departments {
+  id          String    @id
+  name        String    @unique
+  description String?
+  created_at  DateTime  @default(now())
+  updated_at  DateTime
+  courses     courses[]
+}
+
+model documents {
+  id               String         @id
+  student_id       String
+  name             String
+  description      String?
+  required         Boolean        @default(false)
+  status           DocumentStatus @default(pending)
+  uploaded_date    DateTime?
+  expiry_date      DateTime?
+  file_name        String?
+  file_size        String?
+  file_url         String?
+  rejection_reason String?
+  reviewed_by      String?
+  reviewed_at      DateTime?
+  created_at       DateTime       @default(now())
+  updated_at       DateTime
+  students         students       @relation(fields: [student_id], references: [id], onDelete: Cascade)
+}
+
+model enrollments {
+  id              String           @id
+  student_id      String
+  course_id       String
+  semester_id     String
+  enrollment_date DateTime         @default(now())
+  status          EnrollmentStatus @default(enrolled)
+  created_at      DateTime         @default(now())
+  updated_at      DateTime
+  courses         courses          @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  semesters       semesters        @relation(fields: [semester_id], references: [id], onDelete: Cascade)
+  students        students         @relation(fields: [student_id], references: [id], onDelete: Cascade)
+
+  @@unique([student_id, course_id, semester_id])
+}
+
+model grades {
+  id           String       @id
+  student_id   String
+  course_id    String
+  semester_id  String
+  teacher_id   String?
+  score        Float
+  letter_grade GradeLetter?
+  attendance   Float?       @default(100.0)
+  trend        GradeTrend?
+  assignments  Json?
+  comments     String?
+  created_at   DateTime     @default(now())
+  updated_at   DateTime
+  courses      courses      @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  semesters    semesters    @relation(fields: [semester_id], references: [id], onDelete: Cascade)
+  students     students     @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  teachers     teachers?    @relation(fields: [teacher_id], references: [id])
+
+  @@unique([student_id, course_id, semester_id])
+}
+
+model parent_students {
+  id                  String   @id
+  parent_id           String
+  student_id          String
+  relationship        String?
+  is_primary          Boolean  @default(false)
+  can_view_grades     Boolean  @default(true)
+  can_view_attendance Boolean  @default(true)
+  can_view_documents  Boolean  @default(true)
+  created_at          DateTime @default(now())
+  updated_at          DateTime
+  parents             parents  @relation(fields: [parent_id], references: [id], onDelete: Cascade)
+  students            students @relation(fields: [student_id], references: [id], onDelete: Cascade)
+
+  @@unique([parent_id, student_id])
+}
+
+model parents {
+  id              String            @id
+  user_id         String            @unique
+  parent_id       String?           @unique
+  relationship    String?
+  status          ParentStatus      @default(active)
+  created_at      DateTime          @default(now())
+  updated_at      DateTime
+  parent_students parent_students[]
+  users           users             @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model recommendations {
+  id             String                 @id
+  student_id     String
+  teacher_id     String
+  course_code    String?
+  course_id      String?
+  purpose        String
+  date_requested DateTime               @default(now())
+  deadline       DateTime?
+  status         RecommendationStatus   @default(pending)
+  priority       RecommendationPriority @default(medium)
+  letter_text    String?
+  submitted_at   DateTime?
+  created_at     DateTime               @default(now())
+  updated_at     DateTime
+  file_name      String?
+  file_url       String?
+  courses        courses?               @relation(fields: [course_id], references: [id])
+  students       students               @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  teachers       teachers               @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
+}
+
+model semesters {
+  id                String              @id
+  name              String              @unique
+  start_date        DateTime
+  end_date          DateTime
+  is_active         Boolean             @default(false)
+  created_at        DateTime            @default(now())
+  updated_at        DateTime
+  enrollments       enrollments[]
+  grades            grades[]
+  student_semesters student_semesters[]
+}
+
+model student_semesters {
+  id             String    @id
+  student_id     String
+  semester_id    String
+  semester_gpa   Float?
+  credits_earned Int       @default(0)
+  created_at     DateTime  @default(now())
+  updated_at     DateTime
+  semesters      semesters @relation(fields: [semester_id], references: [id], onDelete: Cascade)
+  students       students  @relation(fields: [student_id], references: [id], onDelete: Cascade)
+
+  @@unique([student_id, semester_id])
+}
+
+model students {
+  id                         String              @id
+  user_id                    String              @unique
+  student_id                 String              @unique
+  enrollment_date            DateTime
+  expected_graduation        DateTime?
+  program                    String?
+  department                 String?
+  year_of_study              Int?
+  cumulative_gpa             Float?              @default(0.0)
+  total_credits_earned       Int                 @default(0)
+  total_credits_required     Int                 @default(60)
+  status                     StudentStatus       @default(active)
+  created_at                 DateTime            @default(now())
+  updated_at                 DateTime
+  emergency_contact_name     String?
+  emergency_contact_relation String?
+  emergency_contact_phone    String?
+  emergency_contact_email    String?
+  documents                  documents[]
+  enrollments                enrollments[]
+  grades                     grades[]
+  parent_students            parent_students[]
+  recommendations            recommendations[]
+  student_semesters          student_semesters[]
+  users                      users               @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  teacher_ratings            teacher_ratings[]
+}
+
+model teacher_ratings {
+  id         String   @id
+  student_id String
+  teacher_id String
+  rating     Float
+  comment    String?
+  created_at DateTime @default(now())
+  updated_at DateTime
+  students   students @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  teachers   teachers @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
+
+  @@unique([student_id, teacher_id])
+}
+
+model teachers {
+  id                                                   String            @id
+  user_id                                              String            @unique
+  teacher_id                                           String?           @unique
+  department                                           String?
+  rating                                               Float?            @default(0.0)
+  status                                               TeacherStatus     @default(active)
+  created_at                                           DateTime          @default(now())
+  updated_at                                           DateTime
+  course_teachers                                      course_teachers[]
+  courses_courses_grade_recording_teacher_idToteachers courses[]         @relation("courses_grade_recording_teacher_idToteachers")
+  courses_courses_teacher_idToteachers                 courses[]         @relation("courses_teacher_idToteachers")
+  grades                                               grades[]
+  recommendations                                      recommendations[]
+  teacher_ratings                                      teacher_ratings[]
+  users                                                users             @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model users {
+  id                         String    @id
+  email                      String    @unique
+  clerkId                    String    @unique
+  first_name                 String
+  last_name                  String?
+  date_of_birth              DateTime?
+  gender                     Gender?
+  nationality                String?
+  phone                      String?
+  address                    String?
+  city                       String?
+  state                      String?
+  zip_code                   String?
+  country                    String?
+  bio                        String?
+  role                       Role      @default(student)
+  status                     String?   @default("active")
+  emergency_contact_name     String?
+  emergency_contact_number   String?
+  emergency_contact_relation String?
+  emergency_contact_email    String?
+  created_at                 DateTime  @default(now())
+  updated_at                 DateTime
+  admins                     admins?
+  parents                    parents?
+  students                   students?
+  teachers                   teachers?
+}
+
+enum CourseStatus {
+  active
+  inactive
+  completed
+}
+
+enum DocumentStatus {
+  pending
+  uploaded
+  approved
+  rejected
+  expired
+}
+
+enum EnrollmentStatus {
+  enrolled
+  dropped
+  completed
+  failed
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum GradeLetter {
+  A_PLUS
+  A
+  A_MINUS
+  B_PLUS
+  B
+  B_MINUS
+  C_PLUS
+  C
+  C_MINUS
+  D_PLUS
+  D
+  D_MINUS
+  F
+}
+
+enum GradeTrend {
+  up
+  down
+  stable
+}
+
+enum ParentStatus {
+  active
+  inactive
+}
+
+enum RecommendationPriority {
+  high
+  medium
+  low
+}
+
+enum RecommendationStatus {
+  pending
+  submitted
+  declined
+}
+
+enum Role {
+  student
+  teacher
+  admin
+  parent
+}
+
+enum StudentStatus {
+  active
+  at_risk
+  suspended
+  inactive
+}
+
+enum TeacherStatus {
+  active
+  on_leave
+  inactive
+}
